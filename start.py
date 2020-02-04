@@ -7,6 +7,24 @@ from time import sleep
 from dogtail.tree import root
 
 
+SCENARIO = """
+Feature: Test <n_id>
+
+@<n_id>
+Scenario: Test <n_id>
+"""
+
+
+ACTION_STEP = """
+* Generate "<action>" on "<name>" "<roleName>"
+"""
+
+
+VERIFICATION_STEP = """
+Then
+"""
+
+
 ACTION_LOG = []
 
 
@@ -23,7 +41,7 @@ def check_apps(started_apps):
         
 
 
-def action_chooser(node):
+def random_chooser(node):
     actions = [(x, next((y for y in x.actions.keys() if 'expand' not in y),None)) for x in node.findChildren(
         lambda x: x.actions and x.name != 'Close' and x.showing)]
 
@@ -31,8 +49,15 @@ def action_chooser(node):
     return choice(actions) if actions else None
 
 
+# Do not forget about the expand action
+def get_visible_nodes_with_actions(node):
+    return [x for x in node.findChildren(
+        lambda x: x.actions and x.name != 'Close' and x.showing)]
+    
+
+
 def check_output(proc):
-    # stderr piped to stdout
+    # stderr piped to stdout TODO
     output = proc.stdout.readlines()
     if 'error' in output.lower() or 'critical' in output.lower():
         print(f'FAIL:\n {output}')
@@ -43,31 +68,60 @@ def check_output(proc):
         exit()
         
 
-
 def run(cmd, wait=False):
     return Popen(cmd, stdout=PIPE, stderr=STDOUT)
 
 
+class GNode:
+    def __init__(self, anode):
+        self.name = anode.name
+        self.roleName = anode.roleName
+        self.action = next((x for x in anode.actions.keys()), '')
+        self.action_method = anode.doActionNamed
+        self.next = []
+
+    def perform_action(self):
+        self.action_method(self.action)
+
+    def append_node_next(self, anodes):
+        self.next += [x for x in nodes if id(x) not in self.next]
+
+
 if __name__ == "__main__":
-    system('pkill baobab')
-    proc = run('baobab')
+    app = 'gnome-terminal' # aka a11yappname
+    a11yappname = 'gnome-terminal-server'
+    
+    system(f'pkill {app}')
+    proc = run(f'{app}')
     sleep(1)
 
-    app = root.application('baobab')
+    app = root.application(f'{a11yappname}')
     started_apps = root.applications()
-    next_action = action_chooser(app)
+    actions = get_visible_nodes_with_actions(app)
 
-    while next_action:
-        obj, action = next_action
+    nodes = [GNode(x) for x in actions]
 
-        log = f'Action {action} on {obj.name}, {obj.roleName}'
-        print(log)
-        ACTION_LOG += log
+    for node in nodes:
+        node.perform_action()
+        node.append_node_next(get_visible_nodes_with_actions(app))
 
-        hasattr(obj, 'grabFocus') and obj.grabFocus()
-        obj.doActionNamed(action)
-        sleep(1)
-        check_output(proc)
+    import ipdb; ipdb.set_trace()
+    
+
+    action_stack = []
+    done_actions = []
+    # while actions:
+    #     obj, action = actions[0]
+    #     action_stack = actions.copy()
+    #     log = f'Action {action} on {obj.name}, {obj.roleName}'
+    #     print(log)
+    #     ACTION_LOG += log
+
+    #     hasattr(obj, 'grabFocus') and obj.grabFocus()
+    #     obj.doActionNamed(action)
+    #     sleep(1)
+    #     # check_output(proc)
+    #     check_apps(started_apps)
+    #     actions = [x for x in filter(
+    #         lambda x: x not in action_stack, get_actions(app))]
         
-        next_action = action_chooser(app)
-        check_apps(started_apps)
