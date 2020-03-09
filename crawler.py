@@ -80,6 +80,14 @@ def run(cmd, wait=False):
     return Popen(cmd, stdout=PIPE, stderr=STDOUT)
 
 
+class GTree:
+    def __init__(self, a11yappname):
+        self.app = root.application(a11yappname)
+        self.root = GNode(self.app)
+
+    def dump_tree(self):
+        self.root.dump_node()
+
 # TODO: think if a way to 
 class GNode:
     """ implements a Node in oriented graph and maps neighbors """
@@ -92,7 +100,7 @@ class GNode:
         # self.id = (self.name, self.roleName, self.parent_name, self.parent_roleName)
         self.action = next((x for x in anode.actions.keys()), '')
         self.action_method = anode.doActionNamed
-        self.next = []
+        self.next = [GNode(x) for x in anode.findChildren(lambda x: True, recursive=False)]
 
     def perform_action(self, nodes):
         node_states = nodes.copy()
@@ -106,6 +114,11 @@ class GNode:
 
     def append_node_next(self, anodes):
         self.next += [x for x in nodes if id(x) not in self.next]
+    
+    def dump_node(self, indent=''):
+        print(f'{indent}{self.name}:{self.roleName}:{self.action}')
+        for node in self.next:
+            node.dump_node(f'{indent} |')
 
 
 if __name__ == "__main__":
@@ -122,28 +135,6 @@ if __name__ == "__main__":
 
     nodes = [GNode(x) for x in action_nodes]
 
-    for node in nodes:
-        node.perform_action(nodes)
-        node.append_node_next(get_visible_nodes_with_actions(app, action_nodes))
-        for n in node.next:
-            print(f'Unlocked: {n.name}:{n.roleName}')
-    
+    tree = GTree('gnome-terminal-server')
+
     import ipdb; ipdb.set_trace()
-
-    action_stack = []
-    done_actions = []
-    # while actions:
-    #     obj, action = actions[0]
-    #     action_stack = actions.copy()
-    #     log = f'Action {action} on {obj.name}, {obj.roleName}'
-    #     print(log)
-    #     ACTION_LOG += log
-
-    #     hasattr(obj, 'grabFocus') and obj.grabFocus()
-    #     obj.doActionNamed(action)
-    #     sleep(1)
-    #     # check_output(proc)
-    #     check_apps(started_apps)
-    #     actions = [x for x in filter(
-    #         lambda x: x not in action_stack, get_actions(app))]
-        
