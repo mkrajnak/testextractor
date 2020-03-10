@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from copy import copy
 from os import system
 from random import choice
 from subprocess import PIPE, STDOUT, Popen
@@ -88,10 +89,25 @@ class GTree:
     def dump_tree(self):
         self.root.dump_node()
 
+    def get_node_list(self):
+        return self.root.get_nodes_as_list()
+
+    def action_tree(self):
+        atree = copy(self)
+        # # leafs = 
+        # for leaf in leafs:
+        #     while leaf.parent != None:
+        #         if leaf.parent.action:
+        #             break;
+        #         else:
+        #             leaf.parent = leaf.parent.parent
+        return atree
+
 # TODO: think if a way to 
 class GNode:
     """ implements a Node in oriented graph and maps neighbors """
-    def __init__(self, anode):
+    def __init__(self, anode, parent=None):
+        self.parent = parent
         self.anode = anode # keep the reference to the original accessible object
         self.name = anode.name
         self.parent_name = anode.parent.name
@@ -100,7 +116,14 @@ class GNode:
         # self.id = (self.name, self.roleName, self.parent_name, self.parent_roleName)
         self.action = next((x for x in anode.actions.keys()), '')
         self.action_method = anode.doActionNamed
-        self.next = [GNode(x) for x in anode.findChildren(lambda x: True, recursive=False)]
+        self.next = self.get_children()
+
+    def get_nodes_as_list(self):
+        return [self + x.get_nodes_as_list()] 
+
+    def get_children(self):
+        return [GNode(x, self) for x in self.anode.findChildren(
+            lambda x: True, recursive=False)]
 
     def perform_action(self, nodes):
         node_states = nodes.copy()
@@ -116,7 +139,7 @@ class GNode:
         self.next += [x for x in nodes if id(x) not in self.next]
     
     def dump_node(self, indent=''):
-        print(f'{indent}{self.name}:{self.roleName}:{self.action}')
+        print(f'{indent}- {self.name}:{self.roleName}:{self.action}:{self.parent}')
         for node in self.next:
             node.dump_node(f'{indent} |')
 
@@ -136,5 +159,6 @@ if __name__ == "__main__":
     nodes = [GNode(x) for x in action_nodes]
 
     tree = GTree('gnome-terminal-server')
-
+    tree.dump_tree()
+    lel = tree.get_node_list()
     import ipdb; ipdb.set_trace()
