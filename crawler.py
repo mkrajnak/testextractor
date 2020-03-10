@@ -93,14 +93,21 @@ class GTree:
         return self.root.get_nodes_as_list()
 
     def action_tree(self):
+        roleNames = ['filler', 'separator', 'menu bar', 'frame', 'page tab list', 'page tab', 'panel', 'scroll bar']
         atree = copy(self)
-        # # leafs = 
-        # for leaf in leafs:
-        #     while leaf.parent != None:
-        #         if leaf.parent.action:
-        #             break;
-        #         else:
-        #             leaf.parent = leaf.parent.parent
+        nodes = atree.get_node_list()
+        for node in nodes:
+            while node.parent.parent and not node.parent.action:
+                # get rid of useless parents
+                node.parent.next.remove(node)
+                node.parent = node.parent.parent
+                node.parent.next.append(node)
+            if node.roleName in roleNames:
+                for n in node.next:
+                    n.parent = node.parent
+                node.parent.next += node.next
+                node.parent.next.remove(node)
+        import ipdb; ipdb.set_trace()
         return atree
 
 # TODO: think if a way to 
@@ -119,9 +126,14 @@ class GNode:
         self.next = self.get_children()
 
     def get_nodes_as_list(self):
-        return [self + x.get_nodes_as_list()] 
+        """ returns node and it's children in one list"""
+        nodes = []
+        for x in self.next:
+            nodes += [x] + x.get_nodes_as_list()
+        return nodes    
 
     def get_children(self):
+        """ returns all the children for the node """
         return [GNode(x, self) for x in self.anode.findChildren(
             lambda x: True, recursive=False)]
 
@@ -139,7 +151,7 @@ class GNode:
         self.next += [x for x in nodes if id(x) not in self.next]
     
     def dump_node(self, indent=''):
-        print(f'{indent}- {self.name}:{self.roleName}:{self.action}:{self.parent}')
+        print(f'{indent}- {self.name}:{self.roleName}:{self.action}')
         for node in self.next:
             node.dump_node(f'{indent} |')
 
@@ -161,4 +173,4 @@ if __name__ == "__main__":
     tree = GTree('gnome-terminal-server')
     tree.dump_tree()
     lel = tree.get_node_list()
-    import ipdb; ipdb.set_trace()
+    tree.action_tree()
