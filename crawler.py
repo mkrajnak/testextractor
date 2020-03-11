@@ -81,34 +81,59 @@ def run(cmd, wait=False):
     return Popen(cmd, stdout=PIPE, stderr=STDOUT)
 
 
+def sequences_debug_print(test):
+    for test in tests:
+        sequence = ""
+        for node in test:
+            sequence += f"{node.name}:{node.roleName}:{node.action} => "
+        print(sequence)
+
+
 class GTree:
     def __init__(self, a11yappname):
         self.app = root.application(a11yappname)
         self.root = GNode(self.app)
 
     def dump_tree(self):
+        """ Prints out the tree in the plain text for debugging """
         self.root.dump_node()
 
     def get_node_list(self):
         return self.root.get_nodes_as_list()
 
     def action_tree(self):
+        """ Create a copy if the tree composed only from nodes with actions """
+        # TODO: More to come
         roleNames = ['filler', 'separator', 'menu bar', 'frame', 'page tab list', 'page tab', 'panel', 'scroll bar']
         atree = copy(self)
         nodes = atree.get_node_list()
         for node in nodes:
             while node.parent.parent and not node.parent.action:
-                # get rid of useless parents
+                # filtering parent without the action
                 node.parent.next.remove(node)
                 node.parent = node.parent.parent
                 node.parent.next.append(node)
             if node.roleName in roleNames:
+                # get rid of useless parents defined in roleNames list
                 for n in node.next:
                     n.parent = node.parent
                 node.parent.next += node.next
                 node.parent.next.remove(node)
-        import ipdb; ipdb.set_trace()
         return atree
+
+    def test_tree(self):
+        """ This method should be called with action tree intance"""
+        leafs = [x for x in self.get_node_list() if not x.next]
+        test_sequences = []
+        for leaf in leafs:
+            sequence = [leaf]
+            while leaf.parent:
+                sequence.append(leaf.parent)
+                leaf = leaf.parent
+            sequence.reverse()
+            test_sequences.append(sequence)
+        return test_sequences
+
 
 # TODO: think if a way to 
 class GNode:
@@ -137,15 +162,15 @@ class GNode:
         return [GNode(x, self) for x in self.anode.findChildren(
             lambda x: True, recursive=False)]
 
-    def perform_action(self, nodes):
-        node_states = nodes.copy()
+    def perform_action(self, nodes=None):
+        # node_states = nodes.copy()
         self.action_method(self.action)
         # TODO: add newly appeared nodes + nodes that might get gone
-        for old, new in zip(node_states, nodes):
-            if old.anode.visible != new.anode.visible:
-                print(f'State changed: {old.anode.visible} => {new.anode.visible}')
-            if old.anode.showing != new.anode.showing:
-                print(f'State changed: {old.anode.showing} => {new.anode.showing}')
+        # for old, new in zip(node_states, nodes):
+        #     if old.anode.visible != new.anode.visible:
+        #         print(f'State changed: {old.anode.visible} => {new.anode.visible}')
+        #     if old.anode.showing != new.anode.showing:
+        #         print(f'State changed: {old.anode.showing} => {new.anode.showing}')
 
     def append_node_next(self, anodes):
         self.next += [x for x in nodes if id(x) not in self.next]
@@ -173,4 +198,14 @@ if __name__ == "__main__":
     tree = GTree('gnome-terminal-server')
     tree.dump_tree()
     lel = tree.get_node_list()
-    tree.action_tree()
+    atree = tree.action_tree()
+    tests = atree.test_tree()
+
+    sequences_debug_print(tests)
+
+    for test in tests:
+        for node in test:
+            print(f'{node.name}:{node.roleName}')
+            if node.parent:
+                print(f'performing action: {node.action}')
+                node.perform_action()
