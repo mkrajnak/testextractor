@@ -41,7 +41,6 @@ def check_apps(started_apps):
             print(f'INFO: New Apps: {now - start}')
         
 
-
 def random_chooser(node):
     actions = [(x, next((y for y in x.actions.keys() if 'expand' not in y),None)) for x in node.findChildren(
         lambda x: x.actions and x.name != 'Close' and x.showing)]
@@ -182,11 +181,11 @@ class GNode:
 
 
 if __name__ == "__main__":
-    app = 'gnome-terminal' # aka a11yappname
+    app_name = 'gnome-terminal' # aka a11yappname
     a11yappname = 'gnome-terminal-server'
     
-    system(f'pkill {app}')
-    proc = run(f'{app}')
+    system(f'pkill {app_name}')
+    proc = run(f'{app_name}')
     sleep(1)
 
     app = root.application(f'{a11yappname}')
@@ -200,12 +199,21 @@ if __name__ == "__main__":
     lel = tree.get_node_list()
     atree = tree.action_tree()
     tests = atree.test_tree()
-
+    import ipdb; ipdb.set_trace()
     sequences_debug_print(tests)
 
     for test in tests:
+        system(f'pkill {app_name}')
+        proc = run(f'{app_name}')
+        sleep(1)
+        app = root.application(f'{a11yappname}')
         for node in test:
             print(f'{node.name}:{node.roleName}')
             if node.parent:
                 print(f'performing action: {node.action}')
-                node.perform_action()
+                try:
+                    app.child(node.name, node.roleName).doActionNamed(node.action)
+                except Exception as e:
+                    print(e)
+                sleep(1)
+        print('*************')
