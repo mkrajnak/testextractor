@@ -6,6 +6,9 @@ from subprocess import PIPE, STDOUT, Popen
 from time import sleep
 
 from dogtail.tree import root
+from gnode import GNode
+from gtree import GTree
+from rolenames import roleNames
 
 
 SCENARIO = """
@@ -87,99 +90,6 @@ def sequences_debug_print(test):
             sequence += f"{node.name}:{node.roleName}:{node.action} => "
         print(sequence)
 
-
-class GTree:
-    def __init__(self, a11yappname):
-        self.app = root.application(a11yappname)
-        self.root = GNode(self.app)
-
-    def dump_tree(self):
-        """ Prints out the tree in the plain text for debugging """
-        self.root.dump_node()
-
-    def get_node_list(self):
-        return self.root.get_nodes_as_list()
-
-    def action_tree(self):
-        """ Create a copy if the tree composed only from nodes with actions """
-        # TODO: More to come
-        roleNames = ['filler', 'separator', 'menu bar', 'frame', 'page tab list', 'page tab', 'panel', 'scroll bar']
-        atree = copy(self)
-        nodes = atree.get_node_list()
-        for node in nodes:
-            while node.parent.parent and not node.parent.action:
-                # filtering parent without the action
-                node.parent.next.remove(node)
-                node.parent = node.parent.parent
-                node.parent.next.append(node)
-            if node.roleName in roleNames:
-                # get rid of useless parents defined in roleNames list
-                for n in node.next:
-                    n.parent = node.parent
-                node.parent.next += node.next
-                node.parent.next.remove(node)
-        return atree
-
-    def test_tree(self):
-        """ This method should be called with action tree intance"""
-        leafs = [x for x in self.get_node_list() if not x.next]
-        test_sequences = []
-        for leaf in leafs:
-            sequence = [leaf]
-            while leaf.parent:
-                sequence.append(leaf.parent)
-                leaf = leaf.parent
-            sequence.reverse()
-            test_sequences.append(sequence)
-        return test_sequences
-
-
-# TODO: think if a way to 
-class GNode:
-    """ implements a Node in oriented graph and maps neighbors """
-    def __init__(self, anode, parent=None):
-        self.parent = parent
-        self.anode = anode # keep the reference to the original accessible object
-        self.name = anode.name
-        self.parent_name = anode.parent.name
-        self.roleName = anode.roleName
-        self.parent_roleName = anode.parent.roleName
-        # self.id = (self.name, self.roleName, self.parent_name, self.parent_roleName)
-        self.action = next((x for x in anode.actions.keys()), '')
-        self.action_method = anode.doActionNamed
-        self.next = self.get_children()
-
-    def get_nodes_as_list(self):
-        """ returns node and it's children in one list"""
-        nodes = []
-        for x in self.next:
-            nodes += [x] + x.get_nodes_as_list()
-        return nodes    
-
-    def get_children(self):
-        """ returns all the children for the node """
-        return [GNode(x, self) for x in self.anode.findChildren(
-            lambda x: True, recursive=False)]
-
-    def perform_action(self, nodes=None):
-        # node_states = nodes.copy()
-        self.action_method(self.action)
-        # TODO: add newly appeared nodes + nodes that might get gone
-        # for old, new in zip(node_states, nodes):
-        #     if old.anode.visible != new.anode.visible:
-        #         print(f'State changed: {old.anode.visible} => {new.anode.visible}')
-        #     if old.anode.showing != new.anode.showing:
-        #         print(f'State changed: {old.anode.showing} => {new.anode.showing}')
-
-    def append_node_next(self, anodes):
-        self.next += [x for x in nodes if id(x) not in self.next]
-    
-    def dump_node(self, indent=''):
-        print(f'{indent}- {self.name}:{self.roleName}:{self.action}')
-        for node in self.next:
-            node.dump_node(f'{indent} |')
-
-
 if __name__ == "__main__":
     app_name = 'gnome-terminal' # aka a11yappname
     a11yappname = 'gnome-terminal-server'
@@ -199,7 +109,6 @@ if __name__ == "__main__":
     lel = tree.get_node_list()
     atree = tree.action_tree()
     tests = atree.test_tree()
-    import ipdb; ipdb.set_trace()
     sequences_debug_print(tests)
 
     for test in tests:

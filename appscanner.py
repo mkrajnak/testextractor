@@ -4,7 +4,6 @@ from dogtail import dump
 from sys import argv
 
 
-
 def print_stat(stats):
     for stat in set(stats):
         print(f'{stat}: {stats.count(stat)}')
