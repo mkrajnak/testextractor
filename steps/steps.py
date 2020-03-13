@@ -9,7 +9,7 @@ def execute_action(ctx, name, roleName, action):
 
 @step('State: {name} {roleName} {state}')
 @step('State: {name} {roleName} {neg} {state}')
-def execute_action(ctx, name, roleName, state, neg=''):
+def assert_state(ctx, name, roleName, state, neg=''):
     node = ctx.app.instance.child(name, roleName)
     assert hasattr(node, state), f'Obj: {node} is missing attribute {state}'
     

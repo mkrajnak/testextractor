@@ -1,0 +1,22 @@
+component:
+  arches:
+  - all
+  name: <app>
+
+dependencies:
+  beaker-tasks:
+  - /desktop/rhel8/install
+  packages:
+  - <app>
+
+beaker-hardware:
+- x86_64:
+    group: desktop
+    variant: Workstation
+
+setup:
+
+cleanup:
+
+testmapper:
+# Generated part of mapper
