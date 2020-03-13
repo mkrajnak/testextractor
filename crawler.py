@@ -11,27 +11,6 @@ from gtree import GTree
 from rolenames import roleNames
 
 
-SCENARIO = """
-Feature: Test <n_id>
-
-@<n_id>
-Scenario: Test <n_id>
-"""
-
-
-ACTION_STEP = """
-* Generate "<action>" on "<name>" "<roleName>"
-"""
-
-
-VERIFICATION_STEP = """
-Then
-"""
-
-
-ACTION_LOG = []
-
-
 def check_apps(started_apps):
     new_apps = root.applications()
     if len(new_apps) != len(started_apps):
@@ -104,6 +83,7 @@ if __name__ == "__main__":
 
     nodes = [GNode(x) for x in action_nodes]
 
+    import ipdb; ipdb.set_trace()
     tree = GTree('gnome-terminal-server')
     tree.dump_tree()
     lel = tree.get_node_list()
