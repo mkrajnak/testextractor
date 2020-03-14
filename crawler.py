@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from copy import copy
-from os import system
+from os import system, path, walk
 from random import choice
 from subprocess import PIPE, STDOUT, Popen
 from time import sleep
@@ -69,10 +69,25 @@ def sequences_debug_print(test):
             sequence += f"{node.name}:{node.roleName}:{node.action} => "
         print(sequence)
 
+
+def generate_project(app_name, a11yappname):
+    system(f'rm -rf {app_name}')
+    system(f'cp -r project {app_name}')
+    
+    tags = [('<app>', app_name), ('<a11yappname>', a11yappname)]
+
+    for root, _, files in walk(path.expanduser(app_name)):
+        for f in files:
+            for tag, retag in tags:
+                system(f"sed -i 's/{tag}/{retag}/g' {path.join(root, f)}")        
+
 if __name__ == "__main__":
     app_name = 'gnome-terminal' # aka a11yappname
     a11yappname = 'gnome-terminal-server'
-    
+
+    generate_project(app_name, a11yappname)
+    exit(0)
+
     system(f'pkill {app_name}')
     proc = run(f'{app_name}')
     sleep(1)
