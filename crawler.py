@@ -58,10 +58,6 @@ def assert_app_contains_unique_nodes(app):
     assert len(set(nodes)) == len(nodes)
 
 
-def run(cmd, wait=False):
-    return Popen(cmd, stdout=PIPE, stderr=STDOUT)
-
-
 def sequences_debug_print(test):
     for test in tests:
         sequence = ""
@@ -81,24 +77,58 @@ def generate_project(app_name, a11yappname):
             for tag, retag in tags:
                 system(f"sed -i 's/{tag}/{retag}/g' {path.join(root, f)}")        
 
+
+
+class App:
+    """ This is simple app wrapper"""
+    def __init__(self, appname, a11yappname='', start=True, verbose=False):
+        self.app = appname
+        self.cmd = appname
+        self.a11yappname = a11yappname or appname
+        self.proc = None
+        self.params = f"{'--verbose' if verbose else ''}"
+        system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
+        start and self.start()
+
+    def start(self):
+        if self.running:
+            self.kill()
+        
+        self.log = open('app.log', 'a')
+        # mark the beginning of the new instance
+        self.log.write(f'*** Started logging for {self.cmd} {self.params}') 
+        self.log.flush()
+        self.proc = Popen([self.cmd,self.params], stdout=self.log, 
+                    stderr=self.log) # shell=False
+        sleep(1)
+        self.instance = root.application(self.a11yappname)
+
+    def kill(self):
+        try:
+            self.proc.kill()
+            self.log.flush()
+        except Exception:
+            system(f'sudo pkill {self.app}')
+
+    @property
+    def running(self):
+        # todo PIDs + flatpak stuff + should have a method like has running instance
+        return self.a11yappname in [x.name for x in root.applications()]
+
+
 if __name__ == "__main__":
-    app_name = 'gnome-terminal' # aka a11yappname
-    a11yappname = 'gnome-terminal-server'
+    app = App('gnome-software', verbose=True)
+    import ipdb; ipdb.set_trace()
 
-    generate_project(app_name, a11yappname)
-    exit(0)
+    
+    # Todo simple project gen done
+    # generate_project(app_name, a11yappname)
 
-    system(f'pkill {app_name}')
-    proc = run(f'{app_name}')
-    sleep(1)
-
-    app = root.application(f'{a11yappname}')
     started_apps = root.applications()
     action_nodes = get_visible_nodes_with_actions(app)
 
     nodes = [GNode(x) for x in action_nodes]
 
-    import ipdb; ipdb.set_trace()
     tree = GTree('gnome-terminal-server')
     tree.dump_tree()
     lel = tree.get_node_list()
