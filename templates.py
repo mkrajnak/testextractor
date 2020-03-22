@@ -2,23 +2,23 @@
 
 # each <variable> should match the object property as a string to replace
 SCENARIO = {
-    "HEADER":
-    """
+    'HEADER':
+    '''
     Feature: <app> tests
-    """,
+    ''',
 
-    "TEST": 
-    """  
-    @<app>_<test>
-    Scenario: <app>: test
-    """,
+    'TEST': 
+    '''  
+    @<test>
+    Scenario: <app>: <test>
+    ''',
 
-    "ACTION": 
-    "    * Action: <action> <name> <roleName>",
-    "ASSERT_STATE": 
-    "    * State: <name> <roleName> is <state>",
-    "NEG_ASSERT_STATE":
-    "    * State: <name> <roleName> is not <state>",
+    'ACTION': 
+    '    * Action: "<action>" "<name>" "<roleName>"',
+    'ASSERT_STATE': 
+    '    * State: "<name>" "<roleName>" is "<state>"',
+    'NEG_ASSERT_STATE':
+    '    * State: "<name>" <roleName>" is not "<state>"',
 }
 
 def get_string(key):

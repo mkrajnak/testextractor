@@ -80,32 +80,49 @@ def generate_project(app_name, a11yappname):
                 system(f"sed -i 's/{tag}/{retag}/g' {path.join(root, f)}")        
 
 
-def retag(node, app, test, scenario):
-    scenario.replace('<test>', test)
-    # get all required tags from scenario template
-    tags = [x[1:-1] for x in list(set(re.findall('<.+?>', scenario)))]
+def retag(string, app, node=None):
+    # get all required tags from step template
+    tags = [x[1:-1] for x in list(set(re.findall('<.+?>', string)))]
     for tag in tags:
-        if hasattr(node, tag):
+        if node and  hasattr(node, tag):
             # first try to replace everything from node
-            scenario.replace(f'<{tag}>', node[tag])
+            string = string.replace(f'<{tag}>', getattr(node, tag))
         else:
             # otherwise take the app
-            scenario.replace(f'<{tag}>', app[tag])
+            string = string.replace(f'<{tag}>', getattr(app, tag))
+    return string    
 
-
-def generate_step(step):
-    string = templates.get_string(step)
-    templates.get_string(step), '' 
-
-    
 
 # scenario generation -> One graph sequence
-def generate_scenario(sequence):
-    pass
+def generate_steps(app, test):
+    steps = []
+    # TODO: aprent condition ? 
+    for node in [x for x in test if x.parent]:
+        try:
+            # import ipdb; ipdb.set_trace()
+            app.instance.child(node.name, node.roleName).doActionNamed(node.action)
+            # One node one step for now
+            step = templates.get_string('ACTION')
+            steps.append(retag(step, app, node))
+            print(step)
+        except Exception as e:
+            print(e)
+        sleep(1)
+    return steps
+
 
 # multiple scenarios management inside one feature file
-def generate_scenarios(sequence):
-    pass
+def generate_scenario(tests):
+    scenario = [retag(templates.get_string('HEADER'), app)]
+    for (n, test) in zip(range(len(tests)), tests):
+        test_name = f'{test[-1].name}_{n}'
+        # TODO include tstname in retag process
+        scenario_name = templates.get_string('TEST').replace('<test>', test_name)
+        scenario += [retag(scenario_name, app)]
+        scenario += generate_steps(app, test)
+        print('\n'.join(scenario))
+        import ipdb; ipdb.set_trace()
+    
 
 
 if __name__ == "__main__":
@@ -117,20 +134,12 @@ if __name__ == "__main__":
     #nodes = [GNode(x) for x in action_nodes]
     # lel = tree.get_node_list()
     # atree = tree.action_tree()
-
-    app = App('gnome-terminal-server', verbose=True)
+    # app = App('gnome-software', verbose=True)
+    app = App('gnome-terminal', a11yappname='gnome-terminal-server', verbose=True)
     # app.gtree.dump_tree()
+    app.gtree = GTree(app.a11yappname)
     tests = app.gtree.test_tree()
+    generate_scenario(tests)
     # sequences_debug_print(tests)
 
-    for test in tests:
-        for node in test:
-            print(f'{node.name}:{node.roleName}')
-            if node.parent:
-                print(f'performing action: {node.action}')
-                try:
-                    app.child(node.name, node.roleName).doActionNamed(node.action)
-                except Exception as e:
-                    print(e)
-                sleep(1)
-        print('*************')
+    

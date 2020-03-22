@@ -16,7 +16,7 @@ class App:
         self.proc = None
         self.params = f"{'--verbose' if verbose else ''}"
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
-        self.gtree = GTree(self.a11yappname)
+        # self.gtree = GTree(self.a11yappname)
         start and self.start()
 
     def start(self):
