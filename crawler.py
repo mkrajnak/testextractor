@@ -8,7 +8,10 @@ from time import sleep
 from dogtail.tree import root
 from gnode import GNode
 from gtree import GTree
+from app import App
 from rolenames import roleNames
+import templates
+import re
 
 
 def check_apps(started_apps):
@@ -36,7 +39,6 @@ def get_visible_nodes_with_actions(node, old_nodes=[]):
     all_nodes = set([x for x in node.findChildren(
         lambda x: x.actions and x.name != 'Close' and x.showing)])
     return all_nodes.difference(set(old_nodes))
-    
 
 
 def check_output(proc):
@@ -78,69 +80,50 @@ def generate_project(app_name, a11yappname):
                 system(f"sed -i 's/{tag}/{retag}/g' {path.join(root, f)}")        
 
 
+def retag(node, app, test, scenario):
+    scenario.replace('<test>', test)
+    # get all required tags from scenario template
+    tags = [x[1:-1] for x in list(set(re.findall('<.+?>', scenario)))]
+    for tag in tags:
+        if hasattr(node, tag):
+            # first try to replace everything from node
+            scenario.replace(f'<{tag}>', node[tag])
+        else:
+            # otherwise take the app
+            scenario.replace(f'<{tag}>', app[tag])
 
-class App:
-    """ This is simple app wrapper"""
-    def __init__(self, appname, a11yappname='', start=True, verbose=False):
-        self.app = appname
-        self.cmd = appname
-        self.a11yappname = a11yappname or appname
-        self.proc = None
-        self.params = f"{'--verbose' if verbose else ''}"
-        system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
-        start and self.start()
 
-    def start(self):
-        if self.running:
-            self.kill()
-        
-        self.log = open('app.log', 'a')
-        # mark the beginning of the new instance
-        self.log.write(f'*** Started logging for {self.cmd} {self.params}') 
-        self.log.flush()
-        self.proc = Popen([self.cmd,self.params], stdout=self.log, 
-                    stderr=self.log) # shell=False
-        sleep(1)
-        self.instance = root.application(self.a11yappname)
+def generate_step(step):
+    string = templates.get_string(step)
+    templates.get_string(step), '' 
 
-    def kill(self):
-        try:
-            self.proc.kill()
-            self.log.flush()
-        except Exception:
-            system(f'sudo pkill {self.app}')
+    
 
-    @property
-    def running(self):
-        # todo PIDs + flatpak stuff + should have a method like has running instance
-        return self.a11yappname in [x.name for x in root.applications()]
+# scenario generation -> One graph sequence
+def generate_scenario(sequence):
+    pass
+
+# multiple scenarios management inside one feature file
+def generate_scenarios(sequence):
+    pass
 
 
 if __name__ == "__main__":
-    app = App('gnome-software', verbose=True)
-    import ipdb; ipdb.set_trace()
 
-    
-    # Todo simple project gen done
+    # TODO simple project gen done
     # generate_project(app_name, a11yappname)
+    #started_apps = root.applications()
+    #action_nodes = get_visible_nodes_with_actions(app)
+    #nodes = [GNode(x) for x in action_nodes]
+    # lel = tree.get_node_list()
+    # atree = tree.action_tree()
 
-    started_apps = root.applications()
-    action_nodes = get_visible_nodes_with_actions(app)
-
-    nodes = [GNode(x) for x in action_nodes]
-
-    tree = GTree('gnome-terminal-server')
-    tree.dump_tree()
-    lel = tree.get_node_list()
-    atree = tree.action_tree()
-    tests = atree.test_tree()
-    sequences_debug_print(tests)
+    app = App('gnome-terminal-server', verbose=True)
+    # app.gtree.dump_tree()
+    tests = app.gtree.test_tree()
+    # sequences_debug_print(tests)
 
     for test in tests:
-        system(f'pkill {app_name}')
-        proc = run(f'{app_name}')
-        sleep(1)
-        app = root.application(f'{a11yappname}')
         for node in test:
             print(f'{node.name}:{node.roleName}')
             if node.parent:

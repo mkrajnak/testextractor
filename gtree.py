@@ -9,6 +9,7 @@ class GTree:
     def __init__(self, a11yappname):
         self.app = root.application(a11yappname)
         self.root = GNode(self.app)
+        self.atree = self.generate_action_tree()
 
     def dump_tree(self):
         """ Prints out the tree in the plain text for debugging """
@@ -17,7 +18,7 @@ class GTree:
     def get_node_list(self):
         return self.root.get_nodes_as_list()
 
-    def action_tree(self):
+    def generate_action_tree(self):
         """ Create a copy if the tree composed only from nodes with actions """
         atree = copy(self)
         nodes = atree.get_node_list()
