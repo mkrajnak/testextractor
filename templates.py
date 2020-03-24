@@ -10,15 +10,17 @@ SCENARIO = {
     'TEST': 
     '''  
     @<test>
-    Scenario: <app>: <test>
-    ''',
+    Scenario: <app>: <test>''',
 
     'ACTION': 
-    '    * Action: "<action>" "<name>" "<roleName>"',
+    '      * Action: "<action>" "<name>" "<roleName>"',
     'ASSERT_STATE': 
-    '    * State: "<name>" "<roleName>" is "<state>"',
+    '      * State: "<name>" "<roleName>" is "<state>"',
     'NEG_ASSERT_STATE':
-    '    * State: "<name>" <roleName>" is not "<state>"',
+    '      * State: "<name>" <roleName>" is not "<state>"',
+    'START':
+    '      * Start: "<app>" command in session',
+    
 }
 
 def get_string(key):

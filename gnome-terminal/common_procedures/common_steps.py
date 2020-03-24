@@ -118,7 +118,6 @@ def wait_until_attr(ctx, name=None, roleName=None, descr=None, m_btn=None, attr=
 @step('Start application "{application}" via command "{command}" in "{session}"')
 def start_application(ctx, application=None, start_via="command", command=None, session=None):
     application = get_application(ctx, application)
-    import ipdb; ipdb.set_trace()
     if start_via == "menu":
         try:
             application.start_via_menu()

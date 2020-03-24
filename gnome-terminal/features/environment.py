@@ -7,8 +7,7 @@ from os import system
 def before_all(ctx):
     try:
         ctx.sandbox = TestSandbox("gnome-terminal")
-        ctx.app = ctx.sandbox.get_app("gnome-terminal", a11yAppName="gnome-terminal-server")
-        ctx.sandbox.set_keyring = False
+        ctx.app = ctx.sandbox.get_app("gnome-terminal", a11yAppName='gnome-terminal-server')
 
     except Exception as e:
         print(f"Environment error: before_all: {e}")

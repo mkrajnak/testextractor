@@ -68,13 +68,14 @@ def sequences_debug_print(test):
         print(sequence)
 
 
-def generate_project(app_name, a11yappname):
-    system(f'rm -rf {app_name}')
-    system(f'cp -r project {app_name}')
+def generate_project(app):
+    ''' Generate an empty project for the new application '''
+    system(f'rm -rf {app.app}')
+    system(f'cp -r project {app.app}')
     
-    tags = [('<app>', app_name), ('<a11yappname>', a11yappname)]
+    tags = [('<app>', app.app), ('<a11yappname>', app.a11yappname)]
 
-    for root, _, files in walk(path.expanduser(app_name)):
+    for root, _, files in walk(path.expanduser(app.app)):
         for f in files:
             for tag, retag in tags:
                 system(f"sed -i 's/{tag}/{retag}/g' {path.join(root, f)}")        
@@ -90,7 +91,7 @@ def retag(string, app, node=None):
         else:
             # otherwise take the app
             string = string.replace(f'<{tag}>', getattr(app, tag))
-    return string    
+    return f'{string}\n'  
 
 
 # scenario generation -> One graph sequence
@@ -108,27 +109,29 @@ def generate_steps(app, test):
         except Exception as e:
             print(e)
         sleep(1)
-    return steps
+    return steps + ['\n']
 
 
 # multiple scenarios management inside one feature file
-def generate_scenario(tests):
+def generate_scenario(tests, start=True):
     scenario = [retag(templates.get_string('HEADER'), app)]
     for (n, test) in zip(range(len(tests)), tests):
-        test_name = f'{test[-1].name}_{n}'
+        test_name = f'{test[-1].name}_{n}'.replace(' ', '_')
         # TODO include tstname in retag process
-        scenario_name = templates.get_string('TEST').replace('<test>', test_name)
-        scenario += [retag(scenario_name, app)]
+        scenario_header = templates.get_string('TEST').replace('<test>', test_name)
+        scenario += [retag(scenario_header, app)]
+        if start:
+            step = templates.get_string('START')
+            scenario.append(retag(step, app))
         scenario += generate_steps(app, test)
-        print('\n'.join(scenario))
-        import ipdb; ipdb.set_trace()
-    
+        print(''.join(scenario))
+    with open(f'{path.expanduser(app.app)}/features/generated.feature', 'a') as f:
+        f.write(''.join(scenario))
 
 
 if __name__ == "__main__":
 
     # TODO simple project gen done
-    # generate_project(app_name, a11yappname)
     #started_apps = root.applications()
     #action_nodes = get_visible_nodes_with_actions(app)
     #nodes = [GNode(x) for x in action_nodes]
@@ -136,10 +139,11 @@ if __name__ == "__main__":
     # atree = tree.action_tree()
     # app = App('gnome-software', verbose=True)
     app = App('gnome-terminal', a11yappname='gnome-terminal-server', verbose=True)
+    generate_project(app)
     # app.gtree.dump_tree()
     app.gtree = GTree(app.a11yappname)
     tests = app.gtree.test_tree()
-    generate_scenario(tests)
+    generate_scenario(tests[:3]) # TODO
     # sequences_debug_print(tests)
 
     
