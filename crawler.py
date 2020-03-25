@@ -133,7 +133,8 @@ def generate_scenario(app, tests, start=True):
     scenario = [retag(templates.get_string('HEADER'), app)]
     for (n, test) in zip(range(len(tests)), tests):
         test_name = test[-1].name
-        test_tag = f'{test[-1].name}_{n}'.replace(' ', '_').replace('—', '')
+        # create testtag + replace unwanted chars
+        test_tag = f'{test[-1].name}_{n}'.translate({ord(x): '' for x in ' …—'})
         # TODO include tstname in retag process
         scenario_header = templates.get_string('TEST').replace('<test>', test_tag)
         scenario += [retag(scenario_header, app)]
