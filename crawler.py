@@ -85,40 +85,57 @@ def retag(string, app, node=None):
     # get all required tags from step template
     tags = [x[1:-1] for x in list(set(re.findall('<.+?>', string)))]
     for tag in tags:
-        if node and  hasattr(node, tag):
+        if node and hasattr(node, tag):
             # first try to replace everything from node
-            string = string.replace(f'<{tag}>', getattr(node, tag))
+            string = string.replace(f'<{tag}>', f'{getattr(node, tag)}')
         else:
             # otherwise take the app
-            string = string.replace(f'<{tag}>', getattr(app, tag))
+            string = string.replace(f'<{tag}>', f'{getattr(app, tag)}')
     return f'{string}\n'  
+
+
+def get_step(step_name, app, node=None):
+    step = retag(templates.get_string(step_name), app, node)
+    print(step)
+    return step
 
 
 # scenario generation -> One graph sequence
 def generate_steps(app, test):
     steps = []
-    # TODO: aprent condition ? 
-    for node in [x for x in test if x.parent]:
+    # parent condition exlude the root node automatically
+    app.start() # only one runtime controller for now
+    test_nodes = [x for x in test if x.parent]
+    for node in test_nodes:
         try:
-            # import ipdb; ipdb.set_trace()
-            app.instance.child(node.name, node.roleName).doActionNamed(node.action)
+            if node == test_nodes[-1]:
+                # load fresh instance
+                anode = app.instance.child(node.name, node.roleName)
+                steps.append(get_step('ASSERT_STATE_SHOWING', app, anode))
             # One node one step for now
-            step = templates.get_string('ACTION')
-            steps.append(retag(step, app, node))
-            print(step)
+            app.instance.child(node.name, node.roleName).doActionNamed(node.action)
+            steps.append(get_step('ACTION', app, node))
+            # after action state check, TODO returncodes ?
+            if not app.running:
+                steps.append(get_step('ASSERT_QUIT', app))
+            
         except Exception as e:
+            steps=[]
+            seq = ''.join([f'->{x.name}' for x in test])
+            print(f'Failed to generate sequence for:{seq}')
             print(e)
         sleep(1)
     return steps + ['\n']
 
 
 # multiple scenarios management inside one feature file
-def generate_scenario(tests, start=True):
+def generate_scenario(app, tests, start=True):
     scenario = [retag(templates.get_string('HEADER'), app)]
     for (n, test) in zip(range(len(tests)), tests):
-        test_name = f'{test[-1].name}_{n}'.replace(' ', '_')
+        test_name = test[-1].name
+        test_tag = f'{test[-1].name}_{n}'.replace(' ', '_').replace('—', '')
         # TODO include tstname in retag process
-        scenario_header = templates.get_string('TEST').replace('<test>', test_name)
+        scenario_header = templates.get_string('TEST').replace('<test>', test_tag)
         scenario += [retag(scenario_header, app)]
         if start:
             step = templates.get_string('START')
@@ -141,9 +158,9 @@ if __name__ == "__main__":
     app = App('gnome-terminal', a11yappname='gnome-terminal-server', verbose=True)
     generate_project(app)
     # app.gtree.dump_tree()
-    app.gtree = GTree(app.a11yappname)
+    app.gtree = GTree(app.a11yappname) # app has to be running to perform initial scan
     tests = app.gtree.test_tree()
-    generate_scenario(tests[:3]) # TODO
+    generate_scenario(app, tests) # TODO
     # sequences_debug_print(tests)
 
     

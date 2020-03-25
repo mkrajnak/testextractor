@@ -33,11 +33,11 @@ class App:
         self.instance = root.application(self.a11yappname)
 
     def kill(self):
-        try:
-            self.proc.kill()
-            self.log.flush()
-        except Exception:
-            system(f'sudo pkill {self.app}')
+        # try:
+        system(f'sudo pkill {self.app}')
+        # TODO self.proc.kill()
+        self.log.flush()
+        # except Exception:
 
     @property
     def running(self):
