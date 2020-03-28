@@ -20,7 +20,7 @@ def get_app_stats(app):
 
 
 if __name__ == "__main__":
-""" Simple atspi app scanner """
+    """ Simple atspi app scanner """
     try:  
         app = root.application(argv[1])
     except IndexError:
@@ -29,8 +29,3 @@ if __name__ == "__main__":
         print(f'app {argv[1]} not found')
 
     get_app_stats(app)
-
-
-    
-    
-    

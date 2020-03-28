@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from common_procedures.common_steps import *
-from behave import step
 from time import sleep
+
+from behave import step
+from common_procedures.common_steps import *
 
 ACTION_SLEEP = 0.0
 

@@ -13,6 +13,12 @@ from rolenames import roleNames
 import templates
 import re
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(message)s")
+log = logging.getLogger('log')
+# log.disabled = True
+
 
 def check_apps(started_apps):
     new_apps = root.applications()
@@ -96,7 +102,7 @@ def retag(string, app, node=None):
 
 def get_step(step_name, app, node=None):
     step = retag(templates.get_string(step_name), app, node)
-    print(step)
+    log.debug(step)
     return step
 
 
@@ -112,6 +118,8 @@ def generate_steps(app, test):
                 # load fresh instance
                 anode = app.instance.child(node.name, node.roleName)
                 steps.append(get_step('ASSERT_STATE_SHOWING', app, anode))
+                # experimental OCR
+                steps.append(get_step('ASSERT_NAME_OCR', app, anode))
             # One node one step for now
             app.instance.child(node.name, node.roleName).doActionNamed(node.action)
             steps.append(get_step('ACTION', app, node))
@@ -122,8 +130,8 @@ def generate_steps(app, test):
         except Exception as e:
             steps=[]
             seq = ''.join([f'->{x.name}' for x in test])
-            print(f'Failed to generate sequence for:{seq}')
-            print(e)
+            log.debug(f'Failed to generate sequence for:{seq}')
+            log.debug(e)
         sleep(1)
     return steps + ['\n']
 
@@ -133,7 +141,7 @@ def generate_scenario(app, tests, start=True):
     scenario = [retag(templates.get_string('HEADER'), app)]
     for (n, test) in zip(range(len(tests)), tests):
         test_name = test[-1].name
-        # create testtag + replace unwanted chars
+        # create testtag + replace unwanted chars in test names
         test_tag = f'{test[-1].name}_{n}'.translate({ord(x): '' for x in ' …—'})
         # TODO include tstname in retag process
         scenario_header = templates.get_string('TEST').replace('<test>', test_tag)
@@ -142,13 +150,12 @@ def generate_scenario(app, tests, start=True):
             step = templates.get_string('START')
             scenario.append(retag(step, app))
         scenario += generate_steps(app, test)
-        print(''.join(scenario))
+        log.debug(''.join(scenario))
     with open(f'{path.expanduser(app.app)}/features/generated.feature', 'a') as f:
         f.write(''.join(scenario))
 
 
 if __name__ == "__main__":
-
     # TODO simple project gen done
     #started_apps = root.applications()
     #action_nodes = get_visible_nodes_with_actions(app)
@@ -161,7 +168,7 @@ if __name__ == "__main__":
     # app.gtree.dump_tree()
     app.gtree = GTree(app.a11yappname) # app has to be running to perform initial scan
     tests = app.gtree.test_tree()
-    generate_scenario(app, tests) # TODO
+    generate_scenario(app, tests[:3]) # TODO
     # sequences_debug_print(tests)
 
     

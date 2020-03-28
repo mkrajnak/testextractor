@@ -24,7 +24,8 @@ SCENARIO = {
     '      * Start: "<app>" command in session',
     'ASSERT_QUIT':
     '      * QUIT: <app> is not running',
-    
+    'ASSERT_NAME_OCR':
+    '      * OCR: "<name>" is shown on the screen'
 }
 
 def get_string(key):
