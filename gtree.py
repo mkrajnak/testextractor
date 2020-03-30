@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-from copy import copy
+from copy import copy, deepcopy
 from dogtail.tree import root
 from gnode import GNode
 from rolenames import roleNames
 
 
 class GTree:
-    def __init__(self, a11yappname):
+    def __init__(self, a11yappname, node=None):
         self.app = root.application(a11yappname)
-        self.root = GNode(self.app)
-        self.atree = self.generate_action_tree()
+        self.root = GNode(node) if node else GNode(self.app)
+        self.atree = None # Cannot make a deppcopy of accessible objects
 
     def dump_tree(self):
         """ Prints out the tree in the plain text for debugging """
@@ -17,11 +17,11 @@ class GTree:
 
     def get_node_list(self):
         return self.root.get_nodes_as_list()
-
-    def generate_action_tree(self):
+    
+    def convert_to_action_tree(self):
         """ Create a copy if the tree composed only from nodes with actions """
-        atree = copy(self)
-        nodes = atree.get_node_list()
+        self.atree = True
+        nodes = self.get_node_list()
         for node in nodes:
             while node.parent.parent and not node.parent.action:
                 # filtering parent without the action
@@ -34,10 +34,11 @@ class GTree:
                     n.parent = node.parent
                 node.parent.next += node.next
                 node.parent.next.remove(node)
-        return atree
 
     def test_tree(self):
         """ This method should be called with action tree intance"""
+        if not self.atree:
+            self.convert_to_action_tree()
         leafs = [x for x in self.get_node_list() if not x.next]
         test_sequences = []
         for leaf in leafs:

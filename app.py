@@ -15,6 +15,7 @@ class App:
         self.a11yappname = a11yappname or appname
         self.proc = None
         self.params = f"{'--verbose' if verbose else ''}"
+        self.log = None
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
         # self.gtree = GTree(self.a11yappname)
         start and self.start()
@@ -36,7 +37,8 @@ class App:
         # try:
         system(f'sudo pkill {self.app}')
         # TODO self.proc.kill()
-        self.log.flush()
+        if self.log: # app cleanup before launch
+            self.log.flush()
         # except Exception:
 
     @property

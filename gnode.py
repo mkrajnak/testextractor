@@ -4,9 +4,14 @@ class GNode:
         self.parent = parent
         self.anode = anode # keep the reference to the original accessible object
         self.name = anode.name
-        self.parent_name = anode.parent.name
         self.roleName = anode.roleName
+        # parent staff
+        self.parent_name = anode.parent.name
         self.parent_roleName = anode.parent.roleName
+        # diff for changes
+        self.showing = anode.showing
+        self.visible = anode.visible
+        self.sensitive = anode.sensitive
         # self.id = (self.name, self.roleName, self.parent_name, self.parent_roleName)
         self.action = next((x for x in anode.actions.keys()), '')
         self.action_method = anode.doActionNamed
@@ -16,7 +21,7 @@ class GNode:
         """ returns node and it's children in one list"""
         nodes = []
         for x in self.next:
-            nodes += [x] + x.get_nodes_as_list()
+            nodes +=  [x] + x.get_nodes_as_list()
         return nodes    
 
     def get_children(self):

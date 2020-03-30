@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from copy import copy
+from copy import copy, deepcopy
 from os import system, path, walk
 from random import choice
 from subprocess import PIPE, STDOUT, Popen
@@ -19,6 +19,8 @@ logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
 # log.disabled = True
 
+# todo param!
+OCR=True
 
 def check_apps(started_apps):
     new_apps = root.applications()
@@ -66,12 +68,12 @@ def assert_app_contains_unique_nodes(app):
     assert len(set(nodes)) == len(nodes)
 
 
-def sequences_debug_print(test):
-    for test in tests:
+def sequences_debug_print(tests):
+    for i, test in zip(range(len(tests)), tests):
         sequence = ""
         for node in test:
             sequence += f"{node.name}:{node.roleName}:{node.action} => "
-        print(sequence)
+        print(f'{i}:{sequence}')
 
 
 def generate_project(app):
@@ -106,23 +108,61 @@ def get_step(step_name, app, node=None):
     return step
 
 
+# experimental OCR  
+def generate_ocr_check(steps, app, node):
+    from ocr import get_screen_text
+    if OCR and node.name in get_screen_text():
+        steps.append(get_step('ASSERT_NAME_OCR', app, node))
+    else:
+        log.debug(f'OCR: Failed to find {node.name}')
+
+
+
+# make a symetrical diff between objects
+def get_diff(node_list1, node_list2):
+    """
+    params are lists from GTree.get_node_list() method
+    """
+    import ipdb; ipdb.set_trace()
+    # for node1 in node_list1:
+    #     node2 = next((x for x in node_lists if x.name == node2.name and 
+    #     x.roleName == node2.roleName and x.parent_name == 
+
+
 # scenario generation -> One graph sequence
 def generate_steps(app, test):
     steps = []
     # parent condition exlude the root node automatically
     app.start() # only one runtime controller for now
     test_nodes = [x for x in test if x.parent]
+
+    # diffs
+
     for node in test_nodes:
+        app_before = [x.anode for x in GTree(app.a11yappname).get_node_list()]
         try:
             if node == test_nodes[-1]:
                 # load fresh instance
                 anode = app.instance.child(node.name, node.roleName)
                 steps.append(get_step('ASSERT_STATE_SHOWING', app, anode))
-                # experimental OCR
-                steps.append(get_step('ASSERT_NAME_OCR', app, anode))
+                generate_ocr_check(steps, app, anode)
             # One node one step for now
-            app.instance.child(node.name, node.roleName).doActionNamed(node.action)
-            steps.append(get_step('ACTION', app, node))
+            try:
+                import ipdb; ipdb.set_trace()
+                sleep(0.5)
+                app.instance.child(node.name, node.roleName).doActionNamed(node.action)
+                steps.append(get_step('ACTION', app, node))
+                # node diff
+                app_after = [x.anode for x in GTree(app.a11yappname).get_node_list()]
+                diff = list(set(app_before).symmetric_difference(app_after))
+                new_window = [x for x in diff if x.roleName in ['frame', 'dialog']]
+                
+                for window in new_window:
+                    seq = GTree(app.a11yappname, window).test_tree()
+                
+            except:
+                # Fail to perform the action # TODO test should not be included anymore
+                log.debug(f'Failed to perform {node.action} on {node.name} {node.roleName}')
             # after action state check, TODO returncodes ?
             if not app.running:
                 steps.append(get_step('ASSERT_QUIT', app))
@@ -168,7 +208,8 @@ if __name__ == "__main__":
     # app.gtree.dump_tree()
     app.gtree = GTree(app.a11yappname) # app has to be running to perform initial scan
     tests = app.gtree.test_tree()
-    generate_scenario(app, tests[:3]) # TODO
-    # sequences_debug_print(tests)
+    sequences_debug_print(tests)
+
+    generate_scenario(app, [tests[12]]) # TODO
 
     
