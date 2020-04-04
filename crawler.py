@@ -57,8 +57,6 @@ def check_output(proc):
         print('Steps to reproduce:')
         for x in ACTION_LOG:
             print(x)
-
-        exit()
         
 
 def assert_app_contains_unique_nodes(app):
@@ -73,7 +71,7 @@ def sequences_debug_print(tests):
         sequence = ""
         for node in test:
             sequence += f"{node.name}:{node.roleName}:{node.action} => "
-        print(f'{i}:{sequence}')
+        log.debug(f'Test: {i}:{sequence}')
 
 
 def generate_project(app):
@@ -117,20 +115,51 @@ def generate_ocr_check(steps, app, node):
         log.debug(f'OCR: Failed to find {node.name}')
 
 
+def execute_action(steps, app, node, action_sleep=0.5):
+    # fet fresh instance
+    atspi_node = app.instance.child(node.name, node.roleName)
+    # these actions should highlight/switch focus on item
+    try:
+        if 'menu item' in node.roleName:
+            atspi_node.select()
+        # Mainly the visibility adjustment of the node
+        atspi_node.grabFocus()
+    except Exception:
+        pass
+    # check boxes
+    checked=None # TODO consider doing this for radio button item
+    if 'check' in node.roleName and hasattr(atspi_node, 'checked'):
+        checked = atspi_node.checked
+    # disabled items
+    if not atspi_node.sensitive:
+        log.debug(f'{node.name} {node.roleName} is possibly disabled for action')
+    # perform action
+    try:
+        atspi_node.doActionNamed(node.action)
+        steps.append(get_step('ACTION', app, node))
+        sleep(action_sleep)
+    except Exception as e:
+        # Fail to perform the action
+        log.debug(f'Failed to perform {node.action} on {node.name} {node.roleName}')
+        for state in ['showing', 'sensitive', 'visible', 'checked']:
+            try:
+                log.debug(f'{state}: {getattr(atspi_node, state)}')
+            except AttributeError:
+                pass
+        log.debug(e)
+        return
 
-# make a symetrical diff between objects
-def get_diff(node_list1, node_list2):
-    """
-    params are lists from GTree.get_node_list() method
-    """
-    import ipdb; ipdb.set_trace()
-    # for node1 in node_list1:
-    #     node2 = next((x for x in node_lists if x.name == node2.name and 
-    #     x.roleName == node2.roleName and x.parent_name == 
+    if checked != None and checked != atspi_node.checked: # This is tricky
+        steps.append(get_step('ASSERT_STATE_CHECKED', app, atspi_node))
 
+
+
+explored_paths = [] # TODO provide a better solution
+
+# TODO make a check tree where every node can be checked as either tested or not tested.
 
 # scenario generation -> One graph sequence
-def generate_steps(app, test):
+def generate_steps(app, tests, test_n, test):
     steps = []
     # parent condition exlude the root node automatically
     app.start() # only one runtime controller for now
@@ -146,23 +175,35 @@ def generate_steps(app, test):
                 anode = app.instance.child(node.name, node.roleName)
                 steps.append(get_step('ASSERT_STATE_SHOWING', app, anode))
                 generate_ocr_check(steps, app, anode)
-            # One node one step for now
-            try:
-                import ipdb; ipdb.set_trace()
-                sleep(0.5)
-                app.instance.child(node.name, node.roleName).doActionNamed(node.action)
-                steps.append(get_step('ACTION', app, node))
-                # node diff
-                app_after = [x.anode for x in GTree(app.a11yappname).get_node_list()]
-                diff = list(set(app_before).symmetric_difference(app_after))
-                new_window = [x for x in diff if x.roleName in ['frame', 'dialog']]
+            
+            execute_action(steps, app, node)
+            # node diff
+            app_after = [x.anode for x in GTree(app.a11yappname).get_node_list()]
+            diff = list(set(app_before).symmetric_difference(app_after))
+            if diff:
+                if test in explored_paths:
+                    continue
+                explored_paths.append(test)
+                # new window detection/ other stuff
+                #  check for newly spawned windows
+                new_windows = [x for x in diff if x.roleName in ['frame', 'dialog']]
+                new_menus = [x for x in diff if x.roleName in ['menu']]
+
+                # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
                 
-                for window in new_window:
-                    seq = GTree(app.a11yappname, window).test_tree()
+                seq = []
+                if new_windows:
+                    for window in new_windows:
+                        seq = GTree(app.a11yappname, window).test_tree()
+                elif new_menus:
+                    for menu in new_menus:
+                        seq = GTree(app.a11yappname, menu, node).test_tree()
                 
-            except:
-                # Fail to perform the action # TODO test should not be included anymore
-                log.debug(f'Failed to perform {node.action} on {node.name} {node.roleName}')
+                # import ipdb; ipdb.set_trace()
+                for s in seq:
+                    tests.insert(test_n, test+s)
+                    explored_paths.append(test+s) # TODO unclocked nodes but newly added paths are not being added
+
             # after action state check, TODO returncodes ?
             if not app.running:
                 steps.append(get_step('ASSERT_QUIT', app))
@@ -177,20 +218,22 @@ def generate_steps(app, test):
 
 
 # multiple scenarios management inside one feature file
-def generate_scenario(app, tests, start=True):
+def generate_scenarios(app, tests, start=True):
     scenario = [retag(templates.get_string('HEADER'), app)]
-    for (n, test) in zip(range(len(tests)), tests):
+    test_n = 0
+    for test in tests:
         test_name = test[-1].name
         # create testtag + replace unwanted chars in test names
-        test_tag = f'{test[-1].name}_{n}'.translate({ord(x): '' for x in ' …—'})
+        test_tag = f'{test_n}_{test[-1].name}'.translate({ord(x): '' for x in ' …—'})
         # TODO include tstname in retag process
         scenario_header = templates.get_string('TEST').replace('<test>', test_tag)
         scenario += [retag(scenario_header, app)]
         if start:
             step = templates.get_string('START')
             scenario.append(retag(step, app))
-        scenario += generate_steps(app, test)
-        log.debug(''.join(scenario))
+        scenario += generate_steps(app, tests, test_n, test)
+        test_n += 1
+    # log.debug(''.join(scenario))
     with open(f'{path.expanduser(app.app)}/features/generated.feature', 'a') as f:
         f.write(''.join(scenario))
 
@@ -210,6 +253,6 @@ if __name__ == "__main__":
     tests = app.gtree.test_tree()
     sequences_debug_print(tests)
 
-    generate_scenario(app, [tests[12]]) # TODO
+    generate_scenarios(app, tests) # TODO param for running certain test
 
     

@@ -17,6 +17,8 @@ def before_all(ctx):
 
 def before_scenario(ctx, scenario):
     try:
+        # set to True, if keyring dialog starts to cause problems
+        ctx.sandbox.set_keyring = False
         # TODO: Add a custom cleanup before runnnig the test
         ctx.sandbox.before_scenario(ctx, scenario)
     except Exception as e:

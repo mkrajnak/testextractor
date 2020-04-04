@@ -14,11 +14,13 @@ SCENARIO = {
 
     'ACTION': 
     '      * Action: "<action>" "<name>" "<roleName>"',
+    'ASSERT_STATE_CHECKED': 
+    '      * State: "<roleName>" "<name>" "checked" is "<checked>"',
     'ASSERT_STATE_SHOWING': 
     '      * State: "<roleName>" "<name>" "showing" is "<showing>"',
     'ASSERT_STATE_VISIBLE': 
     '      * State: "<roleName>" "<name>" "visible" is "<visible>"',
-    'NEG_ASSERT_STATE':
+    'NEG_ASSERT_STATE_VISIBLE':
     '      * State: <roleName>" "<name>" visible is not "<state>"',
     'START':
     '      * Start: "<app>" command in session',

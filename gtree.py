@@ -6,9 +6,9 @@ from rolenames import roleNames
 
 
 class GTree:
-    def __init__(self, a11yappname, node=None):
+    def __init__(self, a11yappname, node=None, parent=None):
         self.app = root.application(a11yappname)
-        self.root = GNode(node) if node else GNode(self.app)
+        self.root = GNode(node, parent) if node else GNode(self.app)
         self.atree = None # Cannot make a deppcopy of accessible objects
 
     def dump_tree(self):

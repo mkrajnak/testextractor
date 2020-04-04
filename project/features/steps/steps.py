@@ -8,8 +8,11 @@ ACTION_SLEEP = 0.0
 
 @step('Action: "{action}" "{name}" "{roleName}"')
 def execute_action(ctx, name, roleName, action):
+    node = ctx.app.instance.child(name, roleName)
     try:
-        #Mainly the visibility adjustment of the node
+        if 'menu item' in roleName:
+            node.select()
+        # Mainly the visibility adjustment of the node
         ctx.app.instance.child(name, roleName).grabFocus()
     except Exception:
         pass
