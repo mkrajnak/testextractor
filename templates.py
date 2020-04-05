@@ -22,8 +22,6 @@ SCENARIO = {
     '      * State: "<roleName>" "<name>" "visible" is "<visible>"',
     'ASSERT_APP': 
     '      * State: "<app_name>" has started',
-    'NEG_ASSERT_STATE_VISIBLE':
-    '      * State: <roleName>" "<name>" visible is not "<state>"',
     'START':
     '      * Start: "<app_name>" command in session',
     'ASSERT_QUIT':

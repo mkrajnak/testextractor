@@ -5,10 +5,11 @@ from random import choice
 from subprocess import PIPE, STDOUT, Popen
 from time import sleep
 
+from app import App
 from dogtail.tree import root
 from gnode import GNode
 from gtree import GTree
-from app import App
+from ocr import get_screen_text
 from rolenames import roleNames
 import templates
 import re
@@ -116,31 +117,36 @@ class TestGen:
 
     def get_step(self, step_name, node=None):
         step = self.retag(templates.get_string(step_name), node)
+        # Behave can't handle special string well
+        if node and node.name == '':
+            step = step.replace('""', '"<Empty>"')
         log.debug(f'{self.test_number}{step}')
         return step
 
     # OCR  
     def generate_ocr_check(self, steps, node):
-        from ocr import get_screen_text
         if OCR and node.name in get_screen_text():
             steps.append(self.get_step('ASSERT_NAME_OCR', node))
         else:
-            log.debug(f'OCR: Failed to find {node.name}')
+            log.debug(f'OCR: Failed to find string "{node.name}""')
 
     def get_app_nodes(self):
         return [x.anode for x in GTree(self.app.a11yappname).get_node_list()]
 
-    def execute_action(self, steps, node, action_sleep=1):
-        # fet fresh instance
-        atspi_node = self.app.instance.child(node.name, node.roleName)
+    def focus_node(self, anode):
         # these actions should highlight/switch focus on item
         try:
-            if 'menu item' in node.roleName:
-                atspi_node.select()
+            if 'menu item' in anode.roleName:
+                anode.select()
             # Mainly the visibility adjustment of the node
-            atspi_node.grabFocus()
+            anode.grabFocus()
         except Exception:
             pass
+    
+    def execute_action(self, steps, node, action_sleep=1):
+        # fetch fresh instance
+        atspi_node = self.app.instance.child(node.name, node.roleName)
+        self.focus_node(node)
         # check boxes
         checked=None # TODO consider doing this for radio button item
         if 'check' in node.roleName and hasattr(atspi_node, 'checked'):
@@ -170,10 +176,13 @@ class TestGen:
     def handle_last_node(self, steps, node):
         ''' Generated an assertion for the last node in sequence '''
         # load fresh instance
+        if node.name == '':
+            return # Skip Verification of empty nodes/test fields
         anode = self.app.instance.child(node.name, node.roleName)
         step = self.get_step('ASSERT_STATE_SHOWING', anode)
         steps.append(step)
-        self.generate_ocr_check(steps, anode)
+        if anode.showing and anode.visible:
+            self.generate_ocr_check(steps, anode)
 
     def handle_new_nodes(self, app_before, test):
         diff = self.get_gtree_diff(app_before, self.get_app_nodes())
@@ -182,8 +191,10 @@ class TestGen:
             return
         self.explored_paths.append(test)
         # new window detection/ other stuff
-        #  check for newly spawned windows
+        #  check for newly spawned windows, DO NOT remove actions nodes
         new_windows = [x for x in diff if x.roleName in ['frame', 'dialog']]
+        
+        diff = [x for x in diff if x.actions]
         new_menus = [x for x in diff if x.roleName in ['menu']]
         
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
@@ -191,7 +202,6 @@ class TestGen:
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
                 return
-        diff = [x for x in diff if x.actions]
         for menu in new_menus:
             diff.remove(menu)
             for child in [x for x in diff if menu.isChild(x.name, x.roleName)]:
@@ -200,7 +210,7 @@ class TestGen:
         # remaining actions nodes
         sequences += [[GNode(x)] for x in diff]
         for seq in sequences:
-            self.tests.insert(self.test_number, test+seq)
+            self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
         
 
@@ -230,7 +240,7 @@ class TestGen:
             else:
                 self.handle_new_nodes(app_before, test)
             sleep(1)
-        return steps + ['\n']
+        return steps
 
     # multiple scenarios management inside one feature file
     def generate_scenarios(self, start=True):
@@ -238,8 +248,9 @@ class TestGen:
         :param start: generate start step
         """
         scenario = [self.retag(templates.get_string('HEADER'))]
+        self.tests = [self.tests[TEST]] if TEST else self.tests
         for test in self.tests:
-            test_name = test[-1].name
+            test_name = next((x.name for x in test[::-1] if x.name), '')
             # create testtag + replace unwanted chars in test names
             test_tag = f'{self.test_number}_{test[-1].name}'.translate({ord(x): '' for x in ' …—'})
             # TODO include tstname in retag process
@@ -255,7 +266,14 @@ class TestGen:
             f.write(''.join(scenario))
 
 
+TEST=None
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        try:
+            TEST = int(sys.argv[1])
+        except:
+            raise Exception('Wrong params')
     # TODO params
     test_gen = TestGen('gnome-terminal', a11yappname='gnome-terminal-server')
     

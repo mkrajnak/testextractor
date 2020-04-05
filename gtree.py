@@ -9,7 +9,6 @@ class GTree:
     def __init__(self, a11yappname, node=None, parent=None):
         self.app = root.application(a11yappname)
         self.root = GNode(node, parent) if node else GNode(self.app)
-        self.atree = None # Cannot make a deppcopy of accessible objects
 
     def dump_tree(self):
         """ Prints out the tree in the plain text for debugging """
@@ -20,7 +19,6 @@ class GTree:
     
     def convert_to_action_tree(self):
         """ Create a copy if the tree composed only from nodes with actions """
-        self.atree = True
         nodes = self.get_node_list()
         for node in nodes:
             while node.parent.parent and not node.parent.action:
@@ -37,9 +35,7 @@ class GTree:
 
     def test_tree(self):
         """ This method should be called with action tree intance"""
-        # TODO action tree should always be made from fresh instance
-        if not self.atree:
-            self.convert_to_action_tree()
+        self.convert_to_action_tree()
         leafs = [x for x in self.get_node_list() if not x.next]
         test_sequences = []
         for leaf in leafs:
