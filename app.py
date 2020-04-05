@@ -4,21 +4,17 @@ from os import system
 from time import sleep
 from dogtail.tree import root
 
-from gtree import GTree
-
 
 class App:
     """app wrapper"""
-    def __init__(self, appname, a11yappname='', start=True, verbose=False):
-        self.app = appname
-        self.cmd = appname
-        self.a11yappname = a11yappname or appname
+    def __init__(self, app_name, a11yappname='', verbose=False):
+        self.app_name = app_name
+        self.cmd = app_name
+        self.a11yappname = a11yappname or app_name
         self.proc = None
         self.params = f"{'--verbose' if verbose else ''}"
         self.log = None
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
-        # self.gtree = GTree(self.a11yappname)
-        start and self.start()
 
     def start(self):
         if self.running:
@@ -35,7 +31,7 @@ class App:
 
     def kill(self):
         # try:
-        system(f'sudo pkill {self.app}')
+        system(f'sudo pkill {self.app_name}')
         # TODO self.proc.kill()
         if self.log: # app cleanup before launch
             self.log.flush()

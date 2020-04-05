@@ -4,13 +4,13 @@
 SCENARIO = {
     'HEADER':
     '''
-    Feature: <app> tests
+    Feature: <app_name> tests
     ''',
 
     'TEST': 
     '''  
     @<test>
-    Scenario: <app>: <test>''',
+    Scenario: <app_name>: <test>''',
 
     'ACTION': 
     '      * Action: "<action>" "<name>" "<roleName>"',
@@ -20,12 +20,14 @@ SCENARIO = {
     '      * State: "<roleName>" "<name>" "showing" is "<showing>"',
     'ASSERT_STATE_VISIBLE': 
     '      * State: "<roleName>" "<name>" "visible" is "<visible>"',
+    'ASSERT_APP': 
+    '      * State: "<app_name>" has started',
     'NEG_ASSERT_STATE_VISIBLE':
     '      * State: <roleName>" "<name>" visible is not "<state>"',
     'START':
-    '      * Start: "<app>" command in session',
+    '      * Start: "<app_name>" command in session',
     'ASSERT_QUIT':
-    '      * QUIT: <app> is not running',
+    '      * QUIT: <app_name> is not running',
     'ASSERT_NAME_OCR':
     '      * OCR: "<name>" is shown on the screen'
 }

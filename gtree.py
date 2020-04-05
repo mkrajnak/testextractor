@@ -37,6 +37,7 @@ class GTree:
 
     def test_tree(self):
         """ This method should be called with action tree intance"""
+        # TODO action tree should always be made from fresh instance
         if not self.atree:
             self.convert_to_action_tree()
         leafs = [x for x in self.get_node_list() if not x.next]
