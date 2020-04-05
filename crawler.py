@@ -204,7 +204,7 @@ class TestGen:
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
         
 
-        def handle_new_aps(self, apps_before):
+    def handle_new_aps(self, apps_before):
         apps = list(set(apps_before).symmetric_difference(root.applications()))
         if apps:
             pass
