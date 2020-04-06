@@ -9,5 +9,12 @@ roleNames = [
     'page tab list', 
     'page tab', 
     'panel', 
-    'scroll bar'
+    'scroll bar',
+    'scroll pane',
+    'viewport',
+    'list box',
+    'list item',
+    'label',
+    'icon',
+    'menu'
 ]

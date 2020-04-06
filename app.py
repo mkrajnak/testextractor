@@ -14,6 +14,7 @@ class App:
         self.proc = None
         self.params = f"{'--verbose' if verbose else ''}"
         self.log = None
+        self.main_window_name = None
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
 
     def start(self):
@@ -28,6 +29,7 @@ class App:
                     stderr=self.log) # shell=False
         sleep(1)
         self.instance = root.application(self.a11yappname)
+        self.main_window_name = self.instance.child(roleName='frame').name
 
     def kill(self):
         # try:
@@ -36,6 +38,8 @@ class App:
         if self.log: # app cleanup before launch
             self.log.flush()
         # except Exception:
+        self.instance = None
+        self.main_window_name = None
 
     @property
     def running(self):

@@ -190,10 +190,9 @@ class TestGen:
         if diff == [] or test in self.explored_paths:
             return
         self.explored_paths.append(test)
-        # new window detection/ other stuff
-        #  check for newly spawned windows, DO NOT remove actions nodes
+        # store windows/dialogs as they are without actions and will be
+        # filtered out
         new_windows = [x for x in diff if x.roleName in ['frame', 'dialog']]
-        
         diff = [x for x in diff if x.actions]
         new_menus = [x for x in diff if x.roleName in ['menu']]
         
@@ -201,7 +200,12 @@ class TestGen:
         sequences = []
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
-                return
+            if window.name == self.app.main_window_name:
+                continue
+            else:
+                for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
+                    diff.remove(child)
+                sequences += self.get_test_tree(window)
         for menu in new_menus:
             diff.remove(menu)
             for child in [x for x in diff if menu.isChild(x.name, x.roleName)]:
@@ -212,7 +216,6 @@ class TestGen:
         for seq in sequences:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
-        
 
     def handle_new_aps(self, apps_before):
         apps = list(set(apps_before).symmetric_difference(root.applications()))
@@ -225,8 +228,6 @@ class TestGen:
         # parent condition exlude the root node automatically
         self.app.start() # only one runtime controller for now
         test_nodes = [x for x in test if x.roleName != 'application']
-
-        # diffs
 
         for node in test_nodes:
             app_before = self.get_app_nodes()
