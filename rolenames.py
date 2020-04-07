@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """ contains roleNames which offers no action """
-roleNames = [
+dummy_roleNames = [
     'filler',
     'separator', 
     'menu bar', 

@@ -2,7 +2,7 @@
 from copy import copy, deepcopy
 from dogtail.tree import root
 from gnode import GNode
-from rolenames import roleNames
+from rolenames import dummy_roleNames
 
 
 class GTree:
@@ -26,7 +26,7 @@ class GTree:
                 node.parent.next.remove(node)
                 node.parent = node.parent.parent
                 node.parent.next.append(node)
-            if node.roleName in roleNames:
+            if node.roleName in dummy_roleNames:
                 # get rid of useless parents defined in roleNames list
                 for n in node.next:
                     n.parent = node.parent

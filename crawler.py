@@ -10,7 +10,6 @@ from dogtail.tree import root
 from gnode import GNode
 from gtree import GTree
 from ocr import get_screen_text
-from rolenames import roleNames
 import templates
 import re
 
@@ -52,6 +51,7 @@ class TestGen:
         # test generation props
         self.test_number = 0
         self.explored_paths = []
+        self.skipped_scenarios = []
         # app/project initiation/test generation
         self.app = App(
             app_name, a11yappname=a11yappname or app_name, verbose=True)
@@ -94,8 +94,9 @@ class TestGen:
     def get_gtree_diff(self, before, after):
         return list(set(before).symmetric_difference(after))
 
-    def dump_sequences(self):
-        for i, test in zip(range(len(self.tests)), self.tests):
+    def print_sequences(self, tests=None):
+        tests = tests or self.tests
+        for i, test in zip(range(len(tests)), tests):
             sequence = ""
             for node in test:
                 if not node.parent:
@@ -194,18 +195,17 @@ class TestGen:
         # filtered out
         new_windows = [x for x in diff if x.roleName in ['frame', 'dialog']]
         diff = [x for x in diff if x.actions]
-        new_menus = [x for x in diff if x.roleName in ['menu']]
-        
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
         sequences = []
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
+            for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
+                    diff.remove(child)
             if window.name == self.app.main_window_name:
                 continue
-            else:
-                for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
-                    diff.remove(child)
-                sequences += self.get_test_tree(window)
+            sequences += self.get_test_tree(window)
+        # Then handle menus
+        new_menus = [x for x in diff if x.roleName in ['menu']]
         for menu in new_menus:
             diff.remove(menu)
             for child in [x for x in diff if menu.isChild(x.name, x.roleName)]:
@@ -216,7 +216,7 @@ class TestGen:
         for seq in sequences:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
-
+       
     def handle_new_aps(self, apps_before):
         apps = list(set(apps_before).symmetric_difference(root.applications()))
         if apps:
@@ -260,11 +260,27 @@ class TestGen:
             if start:
                 step = templates.get_string('START')
                 scenario.append(self.retag(step))
-            scenario += self.generate_steps(test)
+            try:
+                scenario += self.generate_steps(test)
+            except Exception:
+                self.save_tests()
+                log.debug('Error while generaring tests, saving test lists')
+                self.print_sequences(self, [test])
+
             self.test_number += 1
         # log.debug(''.join(scenario))
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
+    
+    def save_tests(self, filename='tests.pkl'):
+        import _pickle
+        with open(filename, 'wb') as output:
+            _pickle.dump(self.tests, output, _pickle.HIGHEST_PROTOCOL)
+
+    def load_tests(self, filename='tests.pkl'):
+        import _pickle
+        with open(filename, 'wb') as output:
+            _pickle.load(self.tests, output, _pickle.HIGHEST_PROTOCOL)
 
 
 TEST=None
