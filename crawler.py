@@ -91,6 +91,14 @@ class TestGen:
         self.app.kill()
         self.generate_scenarios()
 
+    def init_tests(self):
+        try:
+            self.tests = [self.tests[self.test]] if self.test else self.tests
+        except IndexError:
+            print(f'test number index out of range,'
+                  f' --test <n> is encouraged to be with --shallow')   
+            exit(1)
+
     def get_test_tree(self, anode=None, parent=None):
         return GTree(self.app.a11y_app_name, anode, parent=parent).test_tree()
 
@@ -265,7 +273,8 @@ class TestGen:
         :param start: generate start step
         """
         scenario = [self.retag(get_step('HEADER'))]
-        self.tests = [self.tests[self.test]] if self.test else self.tests
+        self.init_tests()
+
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), '')
             # create testtag + replace unwanted chars in test names
