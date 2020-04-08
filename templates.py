@@ -3,8 +3,7 @@
 # each <variable> should match the object property as a string to replace
 SCENARIO = {
     'HEADER':
-    '''
-    Feature: <app_name> tests
+    '''Feature: <app_name> tests
     ''',
 
     'TEST': 
@@ -21,7 +20,7 @@ SCENARIO = {
     'ASSERT_STATE_VISIBLE': 
     '      * State: "<roleName>" "<name>" "visible" is "<visible>"',
     'ASSERT_APP': 
-    '      * State: "<app_name>" has started',
+    '      * State: Application "<app_name>" has started',
     'START':
     '      * Start: "<app_name>" command in session',
     'ASSERT_QUIT':

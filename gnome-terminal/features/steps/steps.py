@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from time import sleep
-from dogtail.tree import root
+
 from behave import step
 from common_procedures.common_steps import *
+from dogtail.tree import root 
 
 ACTION_SLEEP = 0.5
 
@@ -40,10 +41,10 @@ def start_app(ctx, app):
     ctx.app.start_via_command(inSession=True)
 
 
-@step('* State: "{a11y_app_name}" has started')
-def start_terminal(ctx, a11y_app_name):
+@step('State: Application "{a11y_app_name}" has started')
+def assert_app_started(ctx, a11y_app_name):
     assert root.application(a11y_app_name), (
-        f'{a11y_app_name} not found in {root.applications}')
+        f"{a11y_app_name} not found in {[x.name for x in root.applications()]}")
 
 
 @step('QUIT: {app} is not running')

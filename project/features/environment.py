@@ -7,7 +7,7 @@ from os import system
 def before_all(ctx):
     try:
         ctx.sandbox = TestSandbox("<app>")
-        ctx.app = ctx.sandbox.get_app("<app>", a11yAppName='<a11yappname>')
+        ctx.app = ctx.sandbox.get_app("<app>", a11yAppName='<a11y_app_name>')
 
     except Exception as e:
         print(f"Environment error: before_all: {e}")

@@ -44,6 +44,7 @@ def assert_ocr_text(ctx, text):
    try:
       assert text in screen_text, error_msg
    except AssertionError:
-      text = ''.join(text.split())
-      screen_text = ''.join(screen_text.split())
+      text = ''.join(text.split()).lower()
+      screen_text = ''.join(screen_text.split()).lower()
       assert text in screen_text, error_msg
+      print('Warning: OCR passed with an optimized text')

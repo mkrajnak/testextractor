@@ -1,0 +1,14 @@
+gnome-terminal:
+  a11y_app_name: gnome-terminal-server
+  cleanup_cmds: 
+    - "dconf reset /org/gtk/Settings/Debug/enable-inspector-keybinding"
+    - "dconf reset -f /org/gnome/terminal/legacy/"
+
+libreoffice-startcenter:
+  a11y_app_name: soffice
+  process_name: soffice.bin
+  desktop_file_path: /usr/share/applications/libreoffice-startcenter.desktop
+  # TODO: something for --norestore
+  cleanup_cmds: 
+    - "rm -rf .config/libreoffice/*"
+
