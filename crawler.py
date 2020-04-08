@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+import logging
+import pickle
+import re
 from copy import copy, deepcopy
-from os import system, path, walk
+from os import path, system, walk
 from random import choice
 from subprocess import PIPE, STDOUT, Popen
 from time import sleep
@@ -10,10 +13,7 @@ from dogtail.tree import root
 from gnode import GNode
 from gtree import GTree
 from ocr import get_screen_text
-import templates
-import re
-
-import logging
+from templates import get_step
 
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
@@ -51,7 +51,8 @@ class TestGen:
         # test generation props
         self.test_number = 0
         self.explored_paths = []
-        self.skipped_scenarios = []
+        self.failed_scenarios = []
+        self.tests = []
         # app/project initiation/test generation
         self.app = App(
             app_name, a11yappname=a11yappname or app_name, verbose=True)
@@ -116,18 +117,19 @@ class TestGen:
                 line = line.replace(f'<{tag}>', f'{getattr(self.app, tag)}')
         return f'{line}\n'  
 
-    def get_step(self, step_name, node=None):
-        step = self.retag(templates.get_string(step_name), node)
+    def add_step(self, step_name, node=None):
+        """ this method only server as an insert interface to self.steps """
+        step = self.retag(get_step(step_name), node)
         # Behave can't handle special string well
         if node and node.name == '':
             step = step.replace('""', '"<Empty>"')
-        log.debug(f'{self.test_number}{step}')
-        return step
+        log.debug(f'{self.test_number}/{len(self.tests)}{step}')
+        self.steps.append(step)
 
     # OCR  
-    def generate_ocr_check(self, steps, node):
+    def generate_ocr_check(self, node):
         if OCR and node.name in get_screen_text():
-            steps.append(self.get_step('ASSERT_NAME_OCR', node))
+            self.add_step('ASSERT_NAME_OCR', node)
         else:
             log.debug(f'OCR: Failed to find string "{node.name}""')
 
@@ -144,7 +146,9 @@ class TestGen:
         except Exception:
             pass
     
-    def execute_action(self, steps, node, action_sleep=1):
+    def execute_action(self, node, action_sleep=1):
+        if not node.action:
+            return
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
         self.focus_node(node)
@@ -158,7 +162,7 @@ class TestGen:
         # perform action
         try:
             atspi_node.doActionNamed(node.action)
-            steps.append(self.get_step('ACTION', node))
+            self.add_step('ACTION', node)
             sleep(action_sleep)
         except Exception as e:
             # Fail to perform the action
@@ -172,18 +176,17 @@ class TestGen:
             return
 
         if checked != None and checked != atspi_node.checked: # This is tricky
-            steps.append(self.get_step('ASSERT_STATE_CHECKED', atspi_node))
+            self.add_step('ASSERT_STATE_CHECKED', atspi_node)
 
-    def handle_last_node(self, steps, node):
+    def handle_last_node(self, node):
         ''' Generated an assertion for the last node in sequence '''
         # load fresh instance
         if node.name == '':
             return # Skip Verification of empty nodes/test fields
         anode = self.app.instance.child(node.name, node.roleName)
-        step = self.get_step('ASSERT_STATE_SHOWING', anode)
-        steps.append(step)
+        self.add_step('ASSERT_STATE_SHOWING', anode)
         if anode.showing and anode.visible:
-            self.generate_ocr_check(steps, anode)
+            self.generate_ocr_check(anode)
 
     def handle_new_nodes(self, app_before, test):
         diff = self.get_gtree_diff(app_before, self.get_app_nodes())
@@ -199,6 +202,7 @@ class TestGen:
         sequences = []
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
+            self.add_step('ASSERT_STATE_SHOWING', window)
             for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
                     diff.remove(child)
             if window.name == self.app.main_window_name:
@@ -212,7 +216,7 @@ class TestGen:
                 diff.remove(child)
             sequences += self.get_test_tree(menu)
         # remaining actions nodes
-        sequences += [[GNode(x)] for x in diff]
+        sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
         for seq in sequences:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
@@ -223,8 +227,8 @@ class TestGen:
             pass
             #TODO checkpoint
 
-    def generate_steps(self, test):
-        steps = []
+    def generate_steps(self, scenario, test):
+        self.steps = [] # Starting with an empty list for every test
         # parent condition exlude the root node automatically
         self.app.start() # only one runtime controller for now
         test_nodes = [x for x in test if x.roleName != 'application']
@@ -232,58 +236,65 @@ class TestGen:
         for node in test_nodes:
             app_before = self.get_app_nodes()
             if node == test_nodes[-1]:
-                self.handle_last_node(steps, node)
+                self.handle_last_node(node)
             
-            self.execute_action(steps, node)
+            self.execute_action(node)
             # after action state check, TODO returncodes ?
             if not self.app.running:
-                steps.append(self.get_step('ASSERT_QUIT'))
+                self.add_step('ASSERT_QUIT')
             else:
                 self.handle_new_nodes(app_before, test)
             sleep(1)
-        return steps
+        scenario += self.steps
 
     # multiple scenarios management inside one feature file
     def generate_scenarios(self, start=True):
         """
         :param start: generate start step
         """
-        scenario = [self.retag(templates.get_string('HEADER'))]
+        scenario = [self.retag(get_step('HEADER'))]
         self.tests = [self.tests[TEST]] if TEST else self.tests
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), '')
             # create testtag + replace unwanted chars in test names
             test_tag = f'{self.test_number}_{test[-1].name}'.translate({ord(x): '' for x in ' …—'})
             # TODO include tstname in retag process
-            scenario_header = templates.get_string('TEST').replace('<test>', test_tag)
+            scenario_header = get_step('TEST').replace('<test>', test_tag)
             scenario += [self.retag(scenario_header)]
             if start:
-                step = templates.get_string('START')
-                scenario.append(self.retag(step))
+                scenario.append(self.retag(get_step('START')))
             try:
-                scenario += self.generate_steps(test)
-            except Exception:
-                self.save_tests()
+                self.generate_steps(scenario, test)
+            except Exception as e:
+                self.failed_scenarios.append(test) 
                 log.debug('Error while generaring tests, saving test lists')
-                self.print_sequences(self, [test])
+                self.print_sequences([test])
 
             self.test_number += 1
-        # log.debug(''.join(scenario))
+        
+        log.debug(''.join(scenario))
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
+        
+        self.print_sequences(filename='failed.pkl', tests=self.failed_scenarios)
+        self.save_tests()
     
-    def save_tests(self, filename='tests.pkl'):
-        import _pickle
+    def save_tests(self, filename='tests.pkl', tests=None):
+        tests = tests or self.tests
         with open(filename, 'wb') as output:
-            _pickle.dump(self.tests, output, _pickle.HIGHEST_PROTOCOL)
+            # Removing accessible references
+            for test in tests:
+                for node in test:
+                    node.action_method = None
+                    node.anode = None
+            pickle.dump(tests, output)
 
-    def load_tests(self, filename='tests.pkl'):
-        import _pickle
-        with open(filename, 'wb') as output:
-            _pickle.load(self.tests, output, _pickle.HIGHEST_PROTOCOL)
+    def load_tests(self, filename='tests.pkl', tests=None):
+        tests = tests or self.tests
+        with open(filename, 'rb') as output:
+            pickle.load(tests, output)
 
 
-TEST=None
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
@@ -293,4 +304,3 @@ if __name__ == "__main__":
             raise Exception('Wrong params')
     # TODO params
     test_gen = TestGen('gnome-terminal', a11yappname='gnome-terminal-server')
-    

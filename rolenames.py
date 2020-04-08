@@ -16,5 +16,4 @@ dummy_roleNames = [
     'list item',
     'label',
     'icon',
-    'menu'
 ]

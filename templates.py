@@ -30,7 +30,7 @@ SCENARIO = {
     '      * OCR: "<name>" is shown on the screen'
 }
 
-def get_string(key):
+def get_step(key):
     try:
         return SCENARIO[key]
     except Exception:
