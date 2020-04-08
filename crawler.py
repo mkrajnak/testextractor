@@ -248,13 +248,14 @@ class TestGen:
             if node == test_nodes[-1]:
                 self.handle_last_node(node)
             self.execute_action(node)
-
-            self.handle_new_apps(apps_before)
             # after action state check, TODO returncodes ?
             if not self.app.running:
                 self.add_step('ASSERT_QUIT')
             elif self.shallow == False:
                 self.handle_new_nodes(app_before, test)
+                self.handle_new_apps(apps_before)
+            else:
+                self.handle_new_apps(apps_before)
             sleep(1)
         scenario += self.steps
 
