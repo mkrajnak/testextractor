@@ -129,7 +129,9 @@ class TestGen:
         self.steps.append(step)
 
     def generate_ocr_check(self, node):
-        if self.OCR and node.name in get_screen_text():
+        if self.OCR == False:
+            return
+        if node.name in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', node)
         else:
             log.debug(f'OCR: Failed to find string "{node.name}""')
@@ -276,7 +278,7 @@ class TestGen:
                 self.generate_steps(scenario, test)
             except Exception as e:
                 self.failed_scenarios.append(test) 
-                log.debug('Error while generaring tests, saving test lists')
+                log.debug('ERROR: while generaring tests, saving test lists')
                 self.print_sequences([test])
                 print(e)
 
@@ -285,7 +287,7 @@ class TestGen:
         log.debug(''.join(scenario))
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
-        
+        self.save_tests(filename='failed.pkl')
         if self.failed_scenarios:
             self.print_sequences(tests=self.failed_scenarios)
             self.save_tests(filename='failed.pkl', tests=self.failed_scenarios)
@@ -298,6 +300,8 @@ class TestGen:
                 for node in test:
                     node.action_method = None
                     node.anode = None
+                    node.parent = None
+                    node.next = None
             pickle.dump(tests, output)
 
     def load_tests(self, filename='tests.pkl', tests=None):
@@ -335,16 +339,3 @@ def handle_args(shallow, debug, test, app, disable_ocr):
 if __name__ == "__main__":
 
     handle_args()
-
-    # import sys
-    
-    # if len(sys.argv) > 1:
-    #     try:
-    #         TEST = int(sys.argv[1])
-    #     except:
-    #         raise Exception('Wrong params')
-    
-    # app_cfg = yaml.load(open('apps.yaml', 'r'))
-    
-    # # TODO params
-    # test_gen = TestGen('gnome-terminal', a11y_app_name='gnome-terminal-server')
