@@ -1,13 +1,16 @@
-from common_procedures.sandbox import *
-import traceback
+#!/usr/bin/env python3
 import sys
+import traceback
 from os import system
+
+from qecore.sandbox import TestSandbox
 
 
 def before_all(ctx):
     try:
         ctx.sandbox = TestSandbox("<app>")
-        ctx.app = ctx.sandbox.get_app("<app>", a11yAppName='<a11y_app_name>')
+        ctx.app = ctx.sandbox.get_aapplication("<app>", 
+            a11yAppName='<a11y_app_name>')
 
     except Exception as e:
         print(f"Environment error: before_all: {e}")
@@ -17,6 +20,7 @@ def before_all(ctx):
 
 def before_scenario(ctx, scenario):
     try:
+        '<cleanup_commands>'
         # set to True, if keyring dialog starts to cause problems
         ctx.sandbox.set_keyring = False
         # TODO: Add a custom cleanup before runnnig the test
@@ -34,4 +38,3 @@ def after_scenario(ctx, scenario):
     except Exception as e:
         print(f"Environment error: after_scenario: {e}")
         traceback.print_exc(file=sys.stdout)
-

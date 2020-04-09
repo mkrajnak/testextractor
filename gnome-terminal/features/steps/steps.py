@@ -2,7 +2,7 @@
 from time import sleep
 
 from behave import step
-from common_procedures.common_steps import *
+from qecore.common_steps import *
 from dogtail.tree import root 
 
 ACTION_SLEEP = 0.5

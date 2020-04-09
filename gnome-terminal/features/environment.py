@@ -1,4 +1,6 @@
-from common_procedures.sandbox import *
+#!/usr/bin/env python3
+from qecore.sandbox import TestSandbox
+
 import traceback
 import sys
 from os import system
