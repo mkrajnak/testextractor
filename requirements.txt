@@ -5,3 +5,5 @@ opencv-python
 pytesseract
 pyyaml
 qecore
+matplotlib
+networkx

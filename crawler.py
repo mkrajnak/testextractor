@@ -3,12 +3,15 @@ import logging
 import pickle
 import re
 from copy import copy, deepcopy
+from itertools import tee
 from os import path, system, walk
 from random import choice
 from subprocess import PIPE, STDOUT, Popen
 from time import sleep
 
 import click
+import matplotlib.pyplot as plt
+import networkx as nx
 import yaml
 from app import App
 from dogtail.tree import root
@@ -108,14 +111,38 @@ class TestGen:
                     with open(path.join(root, f), 'w') as fd:
                         fd.write(string)
     
+    def export_node_graph(self, tests=None):
+        """ pair wise function from itertools doc 
+            https://docs.python.org/3/library/itertools.html """
+        def pairwise(iterable):
+            "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+            a, b = tee(iterable)
+            next(b, None)
+            return zip(a, b)
+        
+        graph = nx.Graph()
+        pairs = []
+        self.tests = tests or self.tests
+        for test in self.tests:
+            for pair in pairwise(test):
+                graph.add_edge(
+                    f'{pair[0].name}\n{pair[0].roleName}',
+                    f'{pair[1].name}\n{pair[1].roleName}')
+        
+        import numpy as np
+        # pos = nx.spring_layout(graph, k=0.1*1/np.sqrt(len(graph.nodes())), iterations=10)
+        nx.draw(graph, pos=None, node_size=20, font_size=3, with_labels=True)
+        plt.savefig(f'{self.app.name}_graph.png', dpi=500)
+    
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
         self.app.start()
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.get_test_tree()
+        self.export_node_graph()
         self.app.stop()
-        self.generate_scenarios()
+        # self.generate_scenarios()
 
     def init_tests(self):
         """ start with tests generation for all tests, or test defined by --test """
@@ -381,7 +408,7 @@ def handle_args(shallow, debug, test, app, disable_ocr):
         exit(1)
     
     TestGen(app, cfg[app], test=test, shallow=shallow, OCR=disable_ocr)
-
+    
 
 if __name__ == "__main__":
 
