@@ -27,6 +27,11 @@ def execute_action(ctx, name, roleName, action):
     sleep(ACTION_SLEEP)
 
 
+@step('State: "{roleName}" "{name}" is shown')
+def assert_window_shown(ctx, name, roleName):
+    assert_state(ctx, name, roleName, 'showing', 'True')
+
+
 @step('State: "{roleName}" "{name}" "{prop}" is "{state}"')
 def assert_state(ctx, name, roleName, prop, state):
     node = ctx.app.instance.child(name, roleName)
@@ -36,10 +41,14 @@ def assert_state(ctx, name, roleName, prop, state):
     assert state == prop_value, f'Expected: {state}, Got: {prop_value}'
 
 
-@step('Start: "{app}" command in session')
-def start_app(ctx, app):
-    ctx.app.start_via_command(inSession=True)
-
+@step('Start: "{app}" via command in session')
+@step('Start: "{app}" via command "{command}" in session')
+def start_app(ctx, app, command=''):
+    if command: 
+        ctx.app.start_via_command(command, inSession=True)
+    else:
+        ctx.app.start_via_command(inSession=True)
+        
 
 @step('State: Application "{a11y_app_name}" has started')
 def assert_app_started(ctx, a11y_app_name):

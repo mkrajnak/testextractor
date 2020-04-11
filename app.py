@@ -1,45 +1,59 @@
 #!/usr/bin/env python3
-from subprocess import Popen
 from os import system
+from subprocess import Popen
 from time import sleep
+
 from dogtail.tree import root
+from qecore.application import Application
 
 
-class App:
+class App(Application):
     """app wrapper"""
     def __init__(self, app_name, cfg, verbose=False):
+        # dummy value for Application contructor, will be overitten by apps.yaml
         self.app_name = app_name
-        self.cmd = app_name
-        self.cleanup_cmds = []
-        self.proces_name = []
         self.a11y_app_name = app_name
+        self.app_process_name =  app_name
+        self.desktop_file_path = ''
+        self.params = ''
+        for param in cfg:
+            setattr(self, param, cfg[param])
+
+        super(App, self).__init__(app_name,
+            a11y_app_name=self.a11y_app_name,
+            app_process_name=self.app_process_name,
+            desktop_file_path=self.desktop_file_path
+            )
+        for param in cfg:
+            setattr(self, param, cfg[param])
+        for param in ['params', 'kill_command']:
+            cfg.pop(param, None)
+        
+        self.exec = f'{self.exec} {self.params}'
         self.proc = None
-        self.params = f"{'--verbose' if verbose else ''}"
         self.log = None
         self.main_window_name = None
-        
-        for param in cfg:
-            setattr(self, param, cfg[param]) 
-
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
 
     def start(self):
         if self.running:
-            self.kill()
+            self.stop()
         
         self.log = open('app.log', 'a')
         # mark the beginning of the new instance
-        self.log.write(f'*** Started logging for {self.cmd} {self.params}') 
+        self.log.write(f'*** Started logging for {self.exec} {self.params}') 
         self.log.flush()
-        self.proc = Popen([self.cmd,self.params], stdout=self.log, 
+        self.proc = Popen(f'{self.exec} {self.params}' , shell=True, stdout=self.log, 
                     stderr=self.log) # shell=False
         sleep(1)
         self.instance = root.application(self.a11y_app_name)
         self.main_window_name = self.instance.child(roleName='frame').name
 
-    def kill(self):
-        # try:
-        system(f'sudo pkill {self.app_name}')
+    def stop(self):
+        if hasattr(self, 'kill_command') and self.kill_command:
+            system(self.kill_command)
+        else:
+            system(f'sudo pkill {self.app_name}')
         # TODO self.proc.kill()
         if self.log: # app cleanup before launch
             self.log.flush()

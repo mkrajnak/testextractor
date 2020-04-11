@@ -17,7 +17,7 @@ from gtree import GTree
 from ocr import get_screen_text
 from templates import get_step
 
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(message)s")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
 
 
@@ -44,7 +44,8 @@ def check_output(proc):
         print('Steps to reproduce:')
         for x in ACTION_LOG:
             print(x)
-        
+
+
 class TestGen:
     def __init__(self, app_name, cfg, test=None, shallow=False, OCR=True):
         # test generation props
@@ -57,8 +58,8 @@ class TestGen:
         self.OCR = OCR
         self.shallow=shallow
         # app/project initiation/test generation
-        self.app = App(app_name, cfg, verbose=True)
-        self.generate_project()
+        self.app = App(app_name, cfg) # TODO verbose
+        self.generate_project(cfg)
         self.generate_tests()
         # self.sequences_debug_print(tests)
    
@@ -68,32 +69,59 @@ class TestGen:
         """
         nodes = [(x.name, x.roleName, x.parent.name, x.parent.roleName) for x in \
                 self.app.instance.findChildren(lambda x: x.actions)]
-        assert len(set(nodes)) == len(nodes)
+        if len(set(nodes)) != len(nodes):
+            log.info(
+                f'Warning application {self.app.app_name} contains duplicit nodes')
 
-    def generate_project(self):
-        ''' Generate an empty project for the new application '''
+    def generate_project(self, cfg):
+        """ Generate an empty project for a new application """
         # Remove previous project dir
         system(f'rm -rf {self.app.app_name}')
         system(f'cp -r project {self.app.app_name}')
+        # parse app params
+        app_params = '\n\t\t\t'.join(
+            [f'{k}="{v}", ' for k, v in cfg.items() if not isinstance(v, list)])
+        # generate cleanup cmds
+        cleanup = ''
+        if 'cleanup_cmds' in cfg:
+                cleanup = f'#!/bin/bash\n' + '\n'.join(
+                    [f'{cmd}' for cmd in cfg['cleanup_cmds']])
+
+                with open(f'{self.app.app_name}/cleanup.sh', 'w') as fd:
+                    fd.write(cleanup)
+                cleanup = 'system("bash cleanup.py")'
+
         # create tags for values to be swapped
-        tags = [('<app>', self.app.app_name), ('<a11y_app_name>', self.app.a11y_app_name)]
+        tags = [
+            ('<app>', self.app.app_name), 
+            ('"<app_params>"', app_params),
+            ('#<cleanup_cmds>', cleanup),
+            ]
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
             for f in files:
                 for tag, value in tags:
-                    system(f"sed -i 's/{tag}/{value}/g' {path.join(root, f)}")
+                    with open(path.join(root, f), 'r') as fd:
+                        string = fd.read()
+                        string = string.replace(tag, value)
+
+                    with open(path.join(root, f), 'w') as fd:
+                        fd.write(string)
     
     def generate_tests(self):
+        """ initial application start, tree scan, sequence generation """
         self.app.start()
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.get_test_tree()
-        self.app.kill()
+        self.app.stop()
         self.generate_scenarios()
 
     def init_tests(self):
+        """ start with tests generation for all tests, or test defined by --test """
         try:
-            self.tests = [self.tests[self.test]] if self.test else self.tests
+            self.tests = [
+                self.tests[self.test]] if self.test != None else self.tests
         except IndexError:
             print(f'test number index out of range,'
                   f' --test <n> is encouraged to be with --shallow')   
@@ -113,7 +141,7 @@ class TestGen:
                 if not node.parent:
                     continue
                 sequence += f"{node.name}:{node.roleName}:{node.action} => "
-            log.debug(f'Test: {i}:{sequence}')
+            log.info(f'Test: {i}:{sequence}')
 
     def retag(self, line, node=None):
         # get all required tags from step template
@@ -133,16 +161,17 @@ class TestGen:
         # Behave can't handle special string well
         if node and node.name == '':
             step = step.replace('""', '"<Empty>"')
-        log.debug(f'{self.test_number}/{len(self.tests)}{step}'.rstrip())
+        log.info(f'{self.test_number}/{len(self.tests)}{step}'.rstrip())
         self.steps.append(step)
 
     def generate_ocr_check(self, node):
         if self.OCR == False:
             return
+        sleep(1)
         if node.name in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', node)
         else:
-            log.debug(f'OCR: Failed to find string "{node.name}""')
+            log.info(f'OCR: Failed to find string "{node.name}""')
 
     def get_app_nodes(self):
         return [x.anode for x in GTree(self.app.a11y_app_name).get_node_list()]
@@ -169,7 +198,7 @@ class TestGen:
             checked = atspi_node.checked
         # disabled items
         if not atspi_node.sensitive:
-            log.debug(f'{node.name} {node.roleName} is possibly disabled for action')
+            log.info(f'{node.name} {node.roleName} is possibly disabled for action')
         # perform action
         try:
             atspi_node.doActionNamed(node.action)
@@ -177,13 +206,13 @@ class TestGen:
             sleep(action_sleep)
         except Exception as e:
             # Fail to perform the action
-            log.debug(f'Failed to perform {node.action} on {node.name} {node.roleName}')
+            log.info(f'Failed to perform {node.action} on {node.name} {node.roleName}')
             for state in ['showing', 'sensitive', 'visible', 'checked']:
                 try:
-                    log.debug(f'{state}: {getattr(atspi_node, state)}')
+                    log.info(f'{state}: {getattr(atspi_node, state)}')
                 except AttributeError:
                     pass
-            log.debug(e)
+            log.info(e)
             return
 
         if checked != None and checked != atspi_node.checked: # This is tricky
@@ -207,18 +236,23 @@ class TestGen:
         self.explored_paths.append(test)
         # store windows/dialogs as they are without actions and will be
         # filtered out
-        new_windows = [x for x in diff if x.roleName in ['frame', 'dialog']]
+        new_windows = [x for x in diff if x.roleName in [
+            'frame', 'dialog', 'file chooser']]
         diff = [x for x in diff if x.actions]
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
         sequences = []
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
-            self.add_step('ASSERT_STATE_SHOWING', window)
+            self.add_step('ASSERT_WINDOW_SHOWN', window)
+            if window.name == self.app.main_window_name or \
+               window.roleName == 'file chooser':
+                continue
+            # continue with building graph
             for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
                     diff.remove(child)
-            if window.name == self.app.main_window_name:
-                continue
             sequences += self.get_test_tree(window)
+        if self.shallow == True:
+            return
         # Then handle menus
         new_menus = [x for x in diff if x.roleName in ['menu']]
         for menu in new_menus:
@@ -245,24 +279,25 @@ class TestGen:
         # Cleanup
         for cmd in self.app.cleanup_cmds:
             system(cmd)
-        
+        self.app.stop()
         self.app.start() # only one runtime controller for now
+
         test_nodes = [x for x in test if x.roleName != 'application']
 
         for node in test_nodes:
             apps_before = root.applications()
             app_before = self.get_app_nodes()
-            
             if node == test_nodes[-1]:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check, TODO returncodes ?
             if not self.app.running:
                 self.add_step('ASSERT_QUIT')
-            elif self.shallow == False:
-                self.handle_new_nodes(app_before, test)
-                self.handle_new_apps(apps_before)
+            elif not self.app.instance.isChild(self.app.main_window_name):
+                # app is running but windows has changed, fresh instance required
+                self.app.instance=root.application(self.app.a11y_app_name)
             else:
+                self.handle_new_nodes(app_before, test)
                 self.handle_new_apps(apps_before)
             sleep(1)
         scenario += self.steps
@@ -283,18 +318,21 @@ class TestGen:
             scenario_header = get_step('TEST').replace('<test>', test_tag)
             scenario += [self.retag(scenario_header)]
             if start:
-                scenario.append(self.retag(get_step('START')))
+                if  hasattr(self.app, 'params'):
+                    scenario.append(self.retag(get_step('START_CMD')))
+                else:
+                    scenario.append(self.retag(get_step('START')))
             try:
                 self.generate_steps(scenario, test)
             except Exception as e:
                 self.failed_scenarios.append(test) 
-                log.debug('ERROR: while generaring tests, saving test lists')
+                log.info('ERROR: while generaring tests, saving test lists')
                 self.print_sequences([test])
                 print(e)
 
             self.test_number += 1
         
-        log.debug(''.join(scenario))
+        log.info(''.join(scenario))
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
         self.save_tests(filename='failed.pkl')
@@ -332,9 +370,8 @@ class TestGen:
     help='Name of the application in apps.yaml')
 def handle_args(shallow, debug, test, app, disable_ocr):
     """ Accessibility test generatrion tool for GTK+ applications"""
-    
-    # TODO log.disabled = debug
-    log.debug(f'shallow:{shallow}, debug:{debug}, '
+    # log.disabled = debug
+    log.info(f'shallow:{shallow}, debug:{debug}, '
               f'test:{test}, app:{app}, ocr:{disable_ocr}')
     cfg = yaml.load(open('apps.yaml', 'r'))
     try:

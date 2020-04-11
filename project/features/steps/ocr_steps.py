@@ -29,6 +29,7 @@ def assert_ocr_text(ctx, text):
    """
    Takes a screenshot a tries to find a text on the screen
    """
+   sleep(1)
    try:
       focus_node(ctx.app.instance.findChild(lambda x: 
          text == x.name or text == x.text))

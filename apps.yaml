@@ -1,3 +1,6 @@
+# The application params except cleanup should match qecore's application class
+# https://dogtail.gitlab.io/qecore/_modules/application.html
+
 gnome-terminal:
   a11y_app_name: gnome-terminal-server
   cleanup_cmds: 
@@ -6,9 +9,11 @@ gnome-terminal:
 
 libreoffice-startcenter:
   a11y_app_name: soffice
-  process_name: soffice.bin
+  app_process_name: soffice.bin
   desktop_file_path: /usr/share/applications/libreoffice-startcenter.desktop
-  # TODO: something for --norestore
-  cleanup_cmds: 
+  kill_command: "pkill soffice"
+  params: "--norestore" # required to avoid unwanted dialogs
+  cleanup_cmds:
+    - "pkill soffice" # LO required a custom kill cmd
     - "rm -rf .config/libreoffice/*"
 
