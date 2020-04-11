@@ -24,4 +24,4 @@ libreoffice-startcenter:
 org.gnome.gedit:
   - flatpak
 org.gnome.Evince:
-  - - flatpak
+  - flatpak

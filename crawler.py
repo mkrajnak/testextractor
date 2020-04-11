@@ -16,7 +16,7 @@ import yaml
 from app import App
 from dogtail.tree import root
 from gnode import GNode
-from gtree import GTree
+from test_tree import TestTree
 from ocr import get_screen_text
 from templates import get_step
 
@@ -139,10 +139,10 @@ class TestGen:
         self.app.start()
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
-        self.tests = self.get_test_tree()
-        self.export_node_graph()
+        self.tests = self.test_sequences()
+        # self.export_node_graph()
         self.app.stop()
-        # self.generate_scenarios()
+        self.generate_scenarios()
 
     def init_tests(self):
         """ start with tests generation for all tests, or test defined by --test """
@@ -154,10 +154,10 @@ class TestGen:
                   f' --test <n> is encouraged to be with --shallow')   
             exit(1)
 
-    def get_test_tree(self, anode=None, parent=None):
-        return GTree(self.app.a11y_app_name, anode, parent=parent).test_tree()
+    def test_sequences(self, anode=None, parent=None):
+        return TestTree(self.app.a11y_app_name, anode, parent=parent).test_sequences()
 
-    def get_gtree_diff(self, before, after):
+    def get_tree_diff(self, before, after):
         return list(set(before).symmetric_difference(after))
 
     def print_sequences(self, tests=None):
@@ -201,7 +201,7 @@ class TestGen:
             log.info(f'OCR: Failed to find string "{node.name}""')
 
     def get_app_nodes(self):
-        return [x.anode for x in GTree(self.app.a11y_app_name).get_node_list()]
+        return [x.anode for x in TestTree(self.app.a11y_app_name).get_node_list()]
 
     def focus_node(self, anode):
         # these actions should highlight/switch focus on item
@@ -256,7 +256,7 @@ class TestGen:
             self.generate_ocr_check(anode)
 
     def handle_new_nodes(self, app_before, test):
-        diff = self.get_gtree_diff(app_before, self.get_app_nodes())
+        diff = self.get_tree_diff(app_before, self.get_app_nodes())
         # actions diff vs normal diff
         if diff == [] or test in self.explored_paths:
             return
@@ -277,7 +277,7 @@ class TestGen:
             # continue with building graph
             for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
                     diff.remove(child)
-            sequences += self.get_test_tree(window)
+            sequences += self.test_sequences(window)
         if self.shallow == True:
             return
         # Then handle menus
@@ -286,7 +286,7 @@ class TestGen:
             diff.remove(menu)
             for child in [x for x in diff if menu.isChild(x.name, x.roleName)]:
                 diff.remove(child)
-            sequences += self.get_test_tree(menu)
+            sequences += self.test_sequences(menu)
         # remaining actions nodes
         sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
         for seq in sequences:

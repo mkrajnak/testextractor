@@ -30,14 +30,7 @@ class GNode:
             lambda x: True, recursive=False)]
 
     def perform_action(self, nodes=None):
-        # node_states = nodes.copy()
         self.action_method(self.action)
-        # TODO: add newly appeared nodes + nodes that might get gone
-        # for old, new in zip(node_states, nodes):
-        #     if old.anode.visible != new.anode.visible:
-        #         print(f'State changed: {old.anode.visible} => {new.anode.visible}')
-        #     if old.anode.showing != new.anode.showing:
-        #         print(f'State changed: {old.anode.showing} => {new.anode.showing}')
 
     def append_node_next(self, nodes):
         self.next += [x for x in nodes if id(x) not in self.next]
