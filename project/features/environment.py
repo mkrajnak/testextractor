@@ -9,8 +9,7 @@ from qecore.sandbox import TestSandbox
 def before_all(ctx):
     try:
         ctx.sandbox = TestSandbox("<app>")
-        ctx.app = ctx.sandbox.get_application("<app>", 
-            "<app_params>")
+        ctx.app = ctx.sandbox.get_application("<app>""<app_params>")
 
     except Exception as e:
         print(f"Environment error: before_all: {e}")

@@ -17,11 +17,10 @@ libreoffice-startcenter:
     - "pkill soffice" # LO required a custom kill cmd
     - "rm -rf .config/libreoffice/*"
 
-  # ctx.gedit = ctx.sandbox.get_flatpak('org.gnome.gedit')
-  # ctx.evince = ctx.sandbox.get_flatpak(
-  #     'org.gnome.Evince', a11yAppName='evince')
+gedit:
+  app_name: org.gnome.gedit
+  flatpak: True
 
-org.gnome.gedit:
-  - flatpak
-org.gnome.Evince:
-  - flatpak
+# org.gnome.Evince:
+#   a11y_app_name: evince
+#   - flatpak

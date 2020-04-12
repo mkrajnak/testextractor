@@ -13,12 +13,12 @@ import click
 import matplotlib.pyplot as plt
 import networkx as nx
 import yaml
-from app import App
+from app import App, FlatpakApp
 from dogtail.tree import root
 from gnode import GNode
-from test_tree import TestTree
 from ocr import get_screen_text
 from templates import get_step
+from test_tree import TestTree
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
@@ -50,7 +50,8 @@ def check_output(proc):
 
 
 class TestGen:
-    def __init__(self, app_name, cfg, test=None, shallow=False, OCR=True):
+    def __init__(self, app_name, cfg, test=None, \
+                shallow=False, OCR=True, generate_only=False):
         # test generation props
         self.test = test
         self.test_number = 0
@@ -58,11 +59,19 @@ class TestGen:
         self.explored_paths = []
         self.failed_scenarios = []
         # generation param
+        self.flatpak = 'flatpak' in cfg
         self.OCR = OCR
         self.shallow=shallow
         # app/project initiation/test generation
-        self.app = App(app_name, cfg) # TODO verbose
+        if self.flatpak:
+            cfg.pop('flatpak')
+            self.app = FlatpakApp(app_name, cfg) # TODO verbose
+        else:    
+            self.app = App(app_name, cfg) # TODO verbose
         self.generate_project(cfg)
+        
+        if generate_only:
+            return
         self.generate_tests()
         # self.sequences_debug_print(tests)
    
@@ -82,7 +91,7 @@ class TestGen:
         system(f'rm -rf {self.app.app_name}')
         system(f'cp -r project {self.app.app_name}')
         # parse app params
-        app_params = '\n\t\t\t'.join(
+        app_params = ',\n\t\t\t'.join(
             [f'{k}="{v}", ' for k, v in cfg.items() if not isinstance(v, list)])
         # generate cleanup cmds
         cleanup = ''
@@ -97,9 +106,13 @@ class TestGen:
         # create tags for values to be swapped
         tags = [
             ('<app>', self.app.app_name), 
-            ('"<app_params>"', app_params),
             ('#<cleanup_cmds>', cleanup),
             ]
+        if self.flatpak:
+            tags += [('get_application', 'get_flatpak')]
+            tags += [('"<app_params>"', '')]
+        else:
+            tags += [('"<app_params>"', app_params)]
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
             for f in files:
@@ -386,6 +399,8 @@ class TestGen:
 
 
 @click.command()
+@click.option('--generate-project', default=False, required=False, is_flag=True,
+    help='only generates project folder for --app')
 @click.option('--disable-ocr', default=True, required=False, is_flag=True,
     help='disabled-ocr checks while generating tests')
 @click.option('--shallow', default=False, required=False, is_flag=True,
@@ -395,7 +410,7 @@ class TestGen:
 @click.option('--test', required=False, type=click.INT, help='Test number in generated sequence.')
 @click.option('--app', prompt='Application name',
     help='Name of the application in apps.yaml')
-def handle_args(shallow, debug, test, app, disable_ocr):
+def handle_args(shallow, debug, test, app, disable_ocr, generate_project):
     """ Accessibility test generatrion tool for GTK+ applications"""
     # log.disabled = debug
     log.info(f'shallow:{shallow}, debug:{debug}, '
@@ -407,7 +422,7 @@ def handle_args(shallow, debug, test, app, disable_ocr):
         print(f'{app} not found, check apps.yaml')
         exit(1)
     
-    TestGen(app, cfg[app], test=test, shallow=shallow, OCR=disable_ocr)
+    TestGen(app, cfg[app], test=test, shallow=shallow, OCR=disable_ocr, generate_only=generate_project)
     
 
 if __name__ == "__main__":

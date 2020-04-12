@@ -5,6 +5,18 @@ from time import sleep
 
 from dogtail.tree import root
 from qecore.application import Application
+from qecore.flatpak import Flatpak
+
+
+class FlatpakApp(Flatpak):
+    """Flatpak wrapper"""
+    def __init__(self, app_name, cfg, verbose=False):
+        self.app_name = app_name
+        self.a11y_app_name = app_name
+        for param in cfg:
+            setattr(self, param, cfg[param])
+        super(FlatpakApp, self).__init__(self.app_name)
+        self.main_window_name = None
 
 
 class App(Application):
