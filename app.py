@@ -8,17 +8,6 @@ from qecore.application import Application
 from qecore.flatpak import Flatpak
 
 
-class FlatpakApp(Flatpak):
-    """Flatpak wrapper"""
-    def __init__(self, app_name, cfg, verbose=False):
-        self.app_name = app_name
-        self.a11y_app_name = app_name
-        for param in cfg:
-            setattr(self, param, cfg[param])
-        super(FlatpakApp, self).__init__(self.app_name)
-        self.main_window_name = None
-
-
 class App(Application):
     """app wrapper"""
     def __init__(self, app_name, cfg, verbose=False):
@@ -28,10 +17,11 @@ class App(Application):
         self.app_process_name =  app_name
         self.desktop_file_path = ''
         self.params = ''
+        self.cleanup_cmds = []
         for param in cfg:
             setattr(self, param, cfg[param])
 
-        super(App, self).__init__(app_name,
+        super().__init__(app_name,
             a11y_app_name=self.a11y_app_name,
             app_process_name=self.app_process_name,
             desktop_file_path=self.desktop_file_path
@@ -48,18 +38,21 @@ class App(Application):
         system('rm -rf app.log') # Fresh copy of the logfile, do not remove logfile between starts
 
     def start(self):
-        if self.running:
+        if self.is_running:
             self.stop()
         
-        self.log = open('app.log', 'a')
+        self.log = open(f'{self.app_name}/{self.app_name}.log', 'a')
         # mark the beginning of the new instance
-        self.log.write(f'*** Started logging for {self.exec} {self.params}') 
+        self.log.write(f'\n*** Started logging for {self.exec}') 
         self.log.flush()
-        self.proc = Popen(f'{self.exec} {self.params}' , shell=True, stdout=self.log, 
-                    stderr=self.log) # shell=False
+        self.proc = Popen(f'{self.exec}' , shell=True, stdout=self.log, stderr=self.log)
         sleep(1)
         self.instance = root.application(self.a11y_app_name)
         self.main_window_name = self.instance.child(roleName='frame').name
+
+    def cleanup(self):
+        for cmd in self.cleanup_cmds:
+            system(cmd)
 
     def stop(self):
         if hasattr(self, 'kill_command') and self.kill_command:
@@ -69,11 +62,6 @@ class App(Application):
         # TODO self.proc.kill()
         if self.log: # app cleanup before launch
             self.log.flush()
-        # except Exception:
+
         self.instance = None
         self.main_window_name = None
-
-    @property
-    def running(self):
-        # todo PIDs + flatpak stuff + should have a method like has running instance
-        return self.a11y_app_name in [x.name for x in root.applications()]

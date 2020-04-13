@@ -12,8 +12,10 @@ from time import sleep
 import click
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import yaml
-from app import App, FlatpakApp
+from app import App
+from flatpak_app import FlatpakApp
 from dogtail.tree import root
 from gnode import GNode
 from ocr import get_screen_text
@@ -91,8 +93,8 @@ class TestGen:
         system(f'rm -rf {self.app.app_name}')
         system(f'cp -r project {self.app.app_name}')
         # parse app params
-        app_params = ',\n\t\t\t'.join(
-            [f'{k}="{v}", ' for k, v in cfg.items() if not isinstance(v, list)])
+        app_params = '\n\t\t\t'.join(
+            [f', {k}="{v}"' for k, v in cfg.items() if not isinstance(v, list)])
         # generate cleanup cmds
         cleanup = ''
         if 'cleanup_cmds' in cfg:
@@ -110,7 +112,7 @@ class TestGen:
             ]
         if self.flatpak:
             tags += [('get_application', 'get_flatpak')]
-            tags += [('"<app_params>"', '')]
+            tags += [('"<app_params>"', app_params)]
         else:
             tags += [('"<app_params>"', app_params)]
         # iterate through file and and retag them 
@@ -142,10 +144,9 @@ class TestGen:
                     f'{pair[0].name}\n{pair[0].roleName}',
                     f'{pair[1].name}\n{pair[1].roleName}')
         
-        import numpy as np
         # pos = nx.spring_layout(graph, k=0.1*1/np.sqrt(len(graph.nodes())), iterations=10)
         nx.draw(graph, pos=None, node_size=20, font_size=3, with_labels=True)
-        plt.savefig(f'{self.app.name}_graph.png', dpi=500)
+        plt.savefig(f'{self.app.name}/{self.app.name}_graph.png', dpi=500)
     
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
@@ -315,11 +316,8 @@ class TestGen:
 
     def generate_steps(self, scenario, test):
         self.steps = [] # Starting with an empty list for every test
-        # parent condition exlude the root node automatically
-        # Cleanup
-        for cmd in self.app.cleanup_cmds:
-            system(cmd)
-        self.app.stop()
+        # parent condition exlude the root node automatically]
+        self.app.cleanup()
         self.app.start() # only one runtime controller for now
 
         test_nodes = [x for x in test if x.roleName != 'application']
@@ -331,7 +329,7 @@ class TestGen:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check, TODO returncodes ?
-            if not self.app.running:
+            if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
             elif not self.app.instance.isChild(self.app.main_window_name):
                 # app is running but windows has changed, fresh instance required
@@ -340,6 +338,8 @@ class TestGen:
                 self.handle_new_nodes(app_before, test)
                 self.handle_new_apps(apps_before)
             sleep(1)
+        
+        self.app.stop()
         scenario += self.steps
 
     # multiple scenarios management inside one feature file
@@ -353,8 +353,9 @@ class TestGen:
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), '')
             # create testtag + replace unwanted chars in test names
-            test_tag = f'{self.test_number}_{test[-1].name}'.translate({ord(x): '' for x in ' …—'})
-            # TODO include tstname in retag process
+            test_tag = f'{self.test_number}_{test[-1].name}'.translate(
+                {ord(x): '' for x in '. …—'})
+            
             scenario_header = get_step('TEST').replace('<test>', test_tag)
             scenario += [self.retag(scenario_header)]
             if start:

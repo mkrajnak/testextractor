@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 from os import system
+from time import sleep
 
 import cv2
 import numpy as np
 from behave import step
 from pytesseract import image_to_string
 from steps import focus_node
+
 
 # Tesseract's params https://github.com/tesseract-ocr/tesseract/blob/master/doc/tesseract.1.asc
 #psm 4 = Assume a single column of text of variable sizes.

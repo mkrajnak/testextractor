@@ -23,6 +23,8 @@ SCENARIO = {
     '      * State: "<roleName>" "<name>" "visible" is "<visible>"',
     'ASSERT_APP': 
     '      * State: Application "<app_name>" has started',
+    'START_FLATPAK':
+    '      * Start Flatpak: "<app_name>" via command in session',
     'START':
     '      * Start: "<app_name>" via command in session',
     'START_CMD':

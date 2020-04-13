@@ -58,4 +58,4 @@ def assert_app_started(ctx, a11y_app_name):
 
 @step('QUIT: {app} is not running')
 def assert_quit(ctx, app):
-    assert not ctx.app.isRunning(), f'{app} is running'
+    assert not ctx.app.is_running(), f'{app} is running'
