@@ -309,6 +309,7 @@ class TestGen:
        
     def handle_new_apps(self, apps_before):
         apps = list(set(apps_before).symmetric_difference(root.applications()))
+        sleep(0.5) # atspi_callbacks ?
         for app in [x for x in apps if x.name]:
             step = get_step('ASSERT_APP').replace('<app_name>', app.name)
             self.steps.append(f'{step}\n')

@@ -29,7 +29,7 @@ class GNode:
         return [GNode(x, self) for x in self.anode.findChildren(
             lambda x: True, recursive=False)]
 
-    def perform_action(self, nodes=None):
+    def perform_action(self):
         self.action_method(self.action)
 
     def append_node_next(self, nodes):

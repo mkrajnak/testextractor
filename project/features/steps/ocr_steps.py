@@ -21,9 +21,11 @@ def get_ocr_text(filename, config=r'--oem 3 --psm 4'):
    # tresholding
    _, img = cv2.threshold(grayImage, 100, 255, cv2.THRESH_BINARY) 
    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]]) 
-   img = cv2.filter2D(cv2.bitwise_not(img), -1, kernel) 
-   #cv2.imwrite('/tmp/grayScale.png', img)
-   return image_to_string(img, lang='eng', config=config)
+   inverted = cv2.filter2D(cv2.bitwise_not(img), -1, kernel) 
+   # cv2.imwrite('/tmp/grayScale.png', img)
+   original_text = image_to_string(img, lang='eng', config=config)
+   inverted_text = image_to_string(inverted, lang='eng', config=config)
+   return f'{original_text} {inverted_text}'
 
 
 @step('OCR: "{text}" is shown on the screen')
