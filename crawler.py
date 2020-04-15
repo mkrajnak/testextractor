@@ -89,12 +89,12 @@ class TestGen:
         # generate cleanup cmds
         cleanup = ''
         if 'cleanup_cmds' in cfg:
-                cleanup = f'#!/bin/bash\n' + '\n'.join(
-                    [f'{cmd}' for cmd in cfg['cleanup_cmds']])
+            cleanup = f'#!/bin/bash\n' + '\n'.join(
+                [f'{cmd}' for cmd in cfg['cleanup_cmds']])
 
-                with open(f'{self.app.app_name}/cleanup.sh', 'w') as fd:
-                    fd.write(cleanup)
-                cleanup = 'system("bash cleanup.py")'
+            with open(f'{self.app.app_name}/cleanup.sh', 'w') as fd:
+                fd.write(cleanup)
+            cleanup = 'system("bash cleanup.py")'
 
         # create tags for values to be swapped
         tags = [
@@ -135,9 +135,9 @@ class TestGen:
                     f'{pair[0].name}\n{pair[0].roleName}',
                     f'{pair[1].name}\n{pair[1].roleName}')
         
-        # pos = nx.spring_layout(graph, k=0.1*1/np.sqrt(len(graph.nodes())), iterations=10)
+        pos = nx.spring_layout(graph, k=0.1*1/np.sqrt(len(graph.nodes())), iterations=10)
         nx.draw(graph, pos=None, node_size=20, font_size=3, with_labels=True)
-        plt.savefig(f'{self.app.name}/{self.app.name}_graph.png', dpi=500)
+        plt.savefig(f'{self.app.app_name}/{self.app.app_name}_graph.png', dpi=500)
     
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
@@ -145,7 +145,7 @@ class TestGen:
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.test_sequences()
-        # self.export_node_graph()
+        self.export_node_graph()
         self.app.stop()
         self.generate_scenarios()
 
@@ -164,6 +164,9 @@ class TestGen:
 
     def get_tree_diff(self, before, after):
         return list(set(before).symmetric_difference(after))
+
+    def filter_string(self, string):
+        return string.translate({ord(x): '' for x in '. …—'})
 
     def print_sequences(self, tests=None):
         tests = tests or self.tests
@@ -196,10 +199,16 @@ class TestGen:
         log.info(f'{self.test_number}/{len(self.tests)}{step}'.rstrip())
         self.steps.append(step)
 
-    def generate_ocr_check(self, node):
+    def generate_ocr_check(self, node, needle=''):
         if self.OCR == False:
             return
         sleep(1)
+        # Formating is a problem, keep it simple
+        if needle:
+            text = self.filter_string(needle)
+        elif len(node.name.split()) > 2:
+            text = self.filter_string(node.name.split()[0])
+        # check if actual string is on the screen
         if node.name in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', node)
         else:
@@ -256,8 +265,8 @@ class TestGen:
         if node.name == '':
             return # Skip Verification of empty nodes/test fields
         anode = self.app.instance.child(node.name, node.roleName)
-        self.add_step('ASSERT_STATE_SHOWING', anode)
         if anode.showing and anode.visible:
+            self.add_step('ASSERT_STATE_SHOWING', anode)
             self.generate_ocr_check(anode)
 
     def handle_new_nodes(self, app_before, test):
@@ -280,11 +289,13 @@ class TestGen:
         parent = test[-1]
         for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
             self.add_step('ASSERT_WINDOW_SHOWN', window)
+            self.generate_ocr_check(window)
             if window.name == self.app.main_window_name or \
                window.roleName == 'file chooser':
                 continue
             # continue with building graph
-            for child in [x for x in diff if window.isChild(x.name, x.roleName)]:
+            for child in [x for x in diff if window.isChild(
+                    x.name, x.roleName, recursive=False)]:
                     diff.remove(child)
             sequences += self.test_sequences(window)
         if self.shallow == True:
@@ -302,13 +313,11 @@ class TestGen:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
        
-    def handle_new_apps(self, apps_before):
-        apps = list(set(apps_before).symmetric_difference(root.applications()))
-        sleep(0.5) # atspi_callbacks ?
+    def handle_new_apps(self, apps):
         for app in [x for x in apps if x.name]:
             step = get_step('ASSERT_APP').replace('<app_name>', app.name)
             self.steps.append(f'{step}\n')
-            system(f'pkill {app.name}')
+            system(f'pkill {app.name.lower()}')
 
     def generate_steps(self, scenario, test):
         self.steps = [] # Starting with an empty list for every test
@@ -321,21 +330,27 @@ class TestGen:
         for node in test_nodes:
             apps_before = root.applications()
             app_before = self.get_app_nodes()
+            
             if node == test_nodes[-1]:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check, TODO returncodes ?
+            
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
             elif not self.app.instance.isChild(
                     self.app.main_window_name, recursive=False):
-                # app is running but windows has changed
+                # app is running but windows have changed
                 window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
             else:
-                self.handle_new_nodes(app_before, test)
-                self.handle_new_apps(apps_before)
-            sleep(1)
+                apps = list(set(
+                    apps_before).symmetric_difference(root.applications()))
+
+                if apps:
+                    self.handle_new_apps(apps)
+                else:
+                    self.handle_new_nodes(app_before, test)
         
         self.app.stop()
         self.app.check_log(self.test_number)
@@ -352,8 +367,7 @@ class TestGen:
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), '')
             # create testtag + replace unwanted chars in test names
-            test_tag = f'{self.test_number}_{test[-1].name}'.translate(
-                {ord(x): '' for x in '. …—'})
+            test_tag = self.filter_string(f'{self.test_number}_{test[-1].name}')
             
             scenario_header = get_step('TEST').replace('<test>', test_tag)
             scenario += [self.retag(scenario_header)]
@@ -418,14 +432,15 @@ def handle_args(shallow, debug, test, app, disable_ocr, generate_project):
     # log.disabled = debug
     log.info(f'shallow:{shallow}, debug:{debug}, '
               f'test:{test}, app:{app}, ocr:{disable_ocr}')
-    cfg = yaml.load(open('apps.yaml', 'r'))
+    cfg = yaml.load(open('apps.yaml', 'r'), yaml.SafeLoader)
     try:
         app_cfg = cfg[app]
     except KeyError:
         print(f'{app} not found, check apps.yaml')
         exit(1)
     
-    TestGen(app, cfg[app], test=test, shallow=shallow, OCR=disable_ocr, generate_only=generate_project)
+    TestGen(app, cfg[app], test=test, shallow=shallow, \
+        OCR=disable_ocr, generate_only=generate_project)
     
 
 if __name__ == "__main__":

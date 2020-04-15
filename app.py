@@ -66,7 +66,7 @@ class App(Application):
         # error check
         for error in error_list:
             if error in app_log.lower():
-                print('TEST:{test_number} contains {error}')
+                print(f'TEST:{test_number} contains {error}:\n{app_log.lower()}')
         
         # write to logfile
         self.log_path = f'{self.app_name}/{self.app_name}.log'

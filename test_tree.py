@@ -31,5 +31,8 @@ class TestTree(GTree):
                 sequence.append(leaf.parent)
                 leaf = leaf.parent
             sequence.reverse()
+            if sequence[-1].roleName == 'menu':
+                # Test with just opening the menu doean't make sense
+                continue
             test_sequences.append(sequence)
         return test_sequences

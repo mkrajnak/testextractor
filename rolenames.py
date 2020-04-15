@@ -17,5 +17,6 @@ dummy_roleNames = [
     'label',
     'icon',
     'split pane',
+    'list',
     'table cell', #? 
 ]
