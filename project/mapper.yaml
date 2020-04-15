@@ -19,5 +19,4 @@ setup:
 cleanup:
 
 testmapper:
-  - start_via_command
 # Generated part of mapper

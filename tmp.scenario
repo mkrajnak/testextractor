@@ -1,7 +1,0 @@
-Feature: <app> tests
-
-@<app>_<test>
-Scenario: <app>: test
-  * Action: <action> <name> <roleName>
-  * State: <name> <roleName> is <state>
-  * State: <name> <roleName> is not <state>

@@ -2,6 +2,7 @@
 import logging
 import pickle
 import re
+import traceback
 from copy import copy, deepcopy
 from itertools import tee
 from os import path, system, walk
@@ -15,8 +16,8 @@ import networkx as nx
 import numpy as np
 import yaml
 from app import App
-from flatpak_app import FlatpakApp
 from dogtail.tree import root
+from flatpak_app import FlatpakApp
 from gnode import GNode
 from ocr import get_screen_text
 from templates import get_step
@@ -39,16 +40,6 @@ def get_visible_nodes_with_actions(node, old_nodes=[]):
     all_nodes = set([x for x in node.findChildren(
         lambda x: x.actions and x.name != 'Close' and x.showing)])
     return all_nodes.difference(set(old_nodes))
-
-
-def check_output(proc):
-    # stderr piped to stdout TODO
-    output = proc.stdout.readlines()
-    if 'error' in output.lower() or 'critical' in output.lower():
-        print(f'FAIL:\n {output}')
-        print('Steps to reproduce:')
-        for x in ACTION_LOG:
-            print(x)
 
 
 class TestGen:
@@ -277,9 +268,13 @@ class TestGen:
         self.explored_paths.append(test)
         # store windows/dialogs as they are without actions and will be
         # filtered out
-        new_windows = [x for x in diff if x.roleName in [
-            'frame', 'dialog', 'file chooser']]
-        diff = [x for x in diff if x.actions]
+        try: # LO glib atspi error
+            new_windows = [x for x in diff if x.roleName in [
+                'frame', 'dialog', 'file chooser']]
+            diff = [x for x in diff if x.actions]
+        except Exception as e:
+            log.debug(traceback.format_exc())
+            return
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
         sequences = []
         parent = test[-1]
@@ -332,15 +327,18 @@ class TestGen:
             # after action state check, TODO returncodes ?
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
-            elif not self.app.instance.isChild(self.app.main_window_name):
-                # app is running but windows has changed, fresh instance required
-                self.app.instance=root.application(self.app.a11y_app_name)
+            elif not self.app.instance.isChild(
+                    self.app.main_window_name, recursive=False):
+                # app is running but windows has changed
+                window = self.app.get_current_window()
+                self.add_step('ASSERT_WINDOW_SHOWN', window)
             else:
                 self.handle_new_nodes(app_before, test)
                 self.handle_new_apps(apps_before)
             sleep(1)
         
         self.app.stop()
+        self.app.check_log(self.test_number)
         scenario += self.steps
 
     # multiple scenarios management inside one feature file
@@ -370,8 +368,11 @@ class TestGen:
                 self.failed_scenarios.append(test) 
                 log.info('ERROR: while generaring tests, saving test lists')
                 self.print_sequences([test])
-                print(e)
+                traceback.print_exc()
 
+            # add test to yaml for CI execution
+            with open(f'{self.app.app_name}/mapper.yaml', 'a') as f:
+                f.write(f'  - {test_tag}\n')
             self.test_number += 1
         
         log.info(''.join(scenario))
