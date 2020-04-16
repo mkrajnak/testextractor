@@ -16,6 +16,8 @@ libreoffice-startcenter:
   cleanup_cmds:
     - "pkill soffice" # LO required a custom kill cmd
     - "rm -rf .config/libreoffice/*"
+  packages:
+    - libreoffice
 
 org.gnome.gedit:
   a11y_app_name: gedit

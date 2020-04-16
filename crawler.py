@@ -44,7 +44,7 @@ def get_visible_nodes_with_actions(node, old_nodes=[]):
 
 class TestGen:
     def __init__(self, app_name, cfg, test=None, \
-                shallow=False, OCR=True, generate_only=False):
+                shallow=False, OCR=True, generate_project_only=False):
         # test generation props
         self.test = test
         self.test_number = 0
@@ -63,7 +63,7 @@ class TestGen:
             self.app = App(app_name, cfg) # TODO verbose
         self.generate_project(cfg)
         
-        if generate_only:
+        if generate_project_only:
             return
         self.generate_tests()
         # self.sequences_debug_print(tests)
@@ -106,6 +106,10 @@ class TestGen:
             tags += [('"<app_params>"', app_params)]
         else:
             tags += [('"<app_params>"', app_params)]
+        
+        pkgs = '\n'.join([f'  - {pkg}' for pkg in cfg['packages']])
+        tags +=[('<packages>', pkgs)]
+        cfg.pop('packages', None)
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
             for f in files:
@@ -416,7 +420,7 @@ class TestGen:
 
 
 @click.command()
-@click.option('--generate-project', default=False, required=False, is_flag=True,
+@click.option('--generate-project-only', default=False, required=False, is_flag=True,
     help='only generates project folder for --app')
 @click.option('--disable-ocr', default=True, required=False, is_flag=True,
     help='disabled-ocr checks while generating tests')
@@ -427,7 +431,7 @@ class TestGen:
 @click.option('--test', required=False, type=click.INT, help='Test number in generated sequence.')
 @click.option('--app', prompt='Application name',
     help='Name of the application in apps.yaml')
-def handle_args(shallow, debug, test, app, disable_ocr, generate_project):
+def handle_args(shallow, debug, test, app, disable_ocr, generate_project_only):
     """ Accessibility test generatrion tool for GTK+ applications"""
     # log.disabled = debug
     log.info(f'shallow:{shallow}, debug:{debug}, '
@@ -440,7 +444,7 @@ def handle_args(shallow, debug, test, app, disable_ocr, generate_project):
         exit(1)
     
     TestGen(app, cfg[app], test=test, shallow=shallow, \
-        OCR=disable_ocr, generate_only=generate_project)
+        OCR=disable_ocr, generate_project_only=generate_project_only)
     
 
 if __name__ == "__main__":

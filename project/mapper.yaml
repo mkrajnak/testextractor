@@ -7,7 +7,7 @@ dependencies:
   beaker-tasks:
   - /desktop/rhel8/install
   packages:
-  - <app>
+<packages>
 
 beaker-hardware:
 - x86_64:
