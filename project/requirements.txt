@@ -1,0 +1,9 @@
+opencv-python
+click
+numpy
+opencv-python
+pytesseract
+pyyaml
+qecore
+matplotlib
+networkx
