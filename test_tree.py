@@ -4,9 +4,9 @@ from rolenames import dummy_roleNames
 
 
 class TestTree(GTree):
-    def __init__(self, a11yappname, node=None, parent=None):
+    def __init__(self, a11yappname, anode=None, parent=None):
         """ Create a copy if the tree composed only from nodes with actions """
-        super(TestTree, self).__init__(a11yappname, node=None, parent=None)
+        super(TestTree, self).__init__(a11yappname, node=anode, parent=parent)
         nodes = self.get_node_list()
         for node in nodes:
             while node.parent.parent and not node.parent.action:
@@ -31,7 +31,7 @@ class TestTree(GTree):
                 sequence.append(leaf.parent)
                 leaf = leaf.parent
             sequence.reverse()
-            if sequence[-1].roleName == 'menu':
+            if sequence[-1].roleName in ['menu', 'frame']:
                 # Test with just opening the menu doean't make sense
                 continue
             test_sequences.append(sequence)

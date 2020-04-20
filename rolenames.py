@@ -4,8 +4,7 @@
 dummy_roleNames = [
     'filler',
     'separator', 
-    'menu bar', 
-    'frame', 
+    'menu bar',
     'page tab list', 
     'page tab', 
     'panel', 

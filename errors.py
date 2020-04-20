@@ -2,7 +2,8 @@
 
 """ errors to check_for in the log """
 error_list = [
-    'Gtk-CRITICAL',
+    'CRITICAL',
     'error',
-    'segmentation fault'
+    'segmentation fault',
+    'Fatal exception'
 ]

@@ -26,6 +26,7 @@ from test_tree import TestTree
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
 
+CHAR_BLACKLIST = ". …—'"
 
 def random_chooser(node):
     actions = [(x, next((y for y in x.actions.keys() if 'expand' not in y),None)) for x in node.findChildren(
@@ -99,7 +100,7 @@ class TestGen:
         # create tags for values to be swapped
         tags = [
             ('<app>', self.app.app_name), 
-            ('#<cleanup_cmds>', cleanup),
+            ('<cleanup_cmds>', cleanup),
             ]
         if self.flatpak:
             tags += [('get_application', 'get_flatpak')]
@@ -107,9 +108,10 @@ class TestGen:
         else:
             tags += [('"<app_params>"', app_params)]
         
-        pkgs = '\n'.join([f'  - {pkg}' for pkg in cfg['packages']])
-        tags +=[('<packages>', pkgs)]
-        cfg.pop('packages', None)
+        if 'packages' in cfg:
+            pkgs = '\n'.join([f'  - {pkg}' for pkg in cfg['packages']])
+            tags +=[('<packages>', pkgs)]
+            cfg.pop('packages', None)
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
             for f in files:
@@ -170,7 +172,7 @@ class TestGen:
         return list(set(before).symmetric_difference(after))
 
     def filter_string(self, string):
-        return string.translate({ord(x): '' for x in '. …—'})
+        return string.translate({ord(x): '' for x in CHAR_BLACKLIST})
 
     def print_sequences(self, tests=None):
         tests = tests or self.tests
@@ -204,7 +206,7 @@ class TestGen:
         self.steps.append(step)
 
     def generate_ocr_check(self, node, needle=''):
-        if self.OCR == False:
+        if self.OCR == False or node.name == '' or needle == '':
             return
         sleep(1)
         # Formating is a problem, keep it simple
@@ -291,11 +293,12 @@ class TestGen:
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
         sequences = []
         parent = test[-1]
-        for window in new_windows: # New Window/Duplicmgmte and x.name == window.name)) > 1:
+        for window in new_windows: # New Window/Duplicate window
             self.add_step('ASSERT_WINDOW_SHOWN', window)
             self.generate_ocr_check(window)
-            if window.name == self.app.main_window_name or \
-               window.roleName == 'file chooser':
+            if window.name == self.app.main_window_name and len(new_windows) == 1:
+                return
+            if window.roleName == 'file chooser':
                 continue
             # continue with building graph
             for child in [x for x in diff if window.isChild(
@@ -311,8 +314,11 @@ class TestGen:
             for child in [x for x in diff if menu.isChild(x.name, x.roleName)]:
                 diff.remove(child)
             sequences += self.test_sequences(menu)
-        # remaining actions nodes
+        # remaining actions nodess
         sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
+        log.debug('Adding new sequences:')
+        self.print_sequences(sequences)
+
         for seq in sequences:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
