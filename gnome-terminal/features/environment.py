@@ -19,7 +19,7 @@ def before_all(ctx):
 
 def before_scenario(ctx, scenario):
     try:
-        "<cleanup_cmds>"
+        system("bash cleanup.py")
         # set to True, if keyring dialog starts to cause problems
         ctx.sandbox.set_keyring = False
         # TODO: Add a custom cleanup before runnnig the test

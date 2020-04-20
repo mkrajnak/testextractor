@@ -100,7 +100,7 @@ class TestGen:
         # create tags for values to be swapped
         tags = [
             ('<app>', self.app.app_name), 
-            ('<cleanup_cmds>', cleanup),
+            ('"<cleanup_cmds>"', cleanup),
             ]
         if self.flatpak:
             tags += [('get_application', 'get_flatpak')]
