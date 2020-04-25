@@ -26,7 +26,7 @@ from test_tree import TestTree
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
 
-CHAR_BLACKLIST = ". …—'"
+OCR_CHAR_BLACKLIST = ". …—'"
 
 def random_chooser(node):
     actions = [(x, next((y for y in x.actions.keys() if 'expand' not in y),None)) for x in node.findChildren(
@@ -124,7 +124,7 @@ class TestGen:
                         fd.write(string)
     
     def export_node_graph(self, tests=None):
-        """ pair wise function from itertools doc 
+        """ pairwise function from itertools doc 
             https://docs.python.org/3/library/itertools.html """
         def pairwise(iterable):
             "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -151,6 +151,7 @@ class TestGen:
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.test_sequences()
+        import ipdb; ipdb.set_trace()
         self.export_node_graph()
         self.app.stop()
         self.generate_scenarios()
@@ -172,7 +173,7 @@ class TestGen:
         return list(set(before).symmetric_difference(after))
 
     def filter_string(self, string):
-        return string.translate({ord(x): '' for x in CHAR_BLACKLIST})
+        return string.translate({ord(x): '' for x in OCR_CHAR_BLACKLIST})
 
     def print_sequences(self, tests=None):
         tests = tests or self.tests
