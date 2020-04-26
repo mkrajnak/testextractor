@@ -14,11 +14,14 @@ class GTree:
         self.root.dump_node()
 
     def get_node_list(self):
-        return self.root.get_nodes_as_list()
+        return self.root.get_nodes_list()
+
+    def get_unique_node_list(self):
+        return self.root.get_unique_nodes_list()
 
     def sequences(self):
         """ This method server only to visualisation of full node graph"""
-        leafs = [x for x in self.get_node_list() if not x.next]
+        leafs = [x for x in self.get_unique_node_list() if not x.next]
         sequences = []
         for leaf in leafs:
             sequence = [leaf]

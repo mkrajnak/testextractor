@@ -19,6 +19,7 @@ from app import App
 from dogtail.tree import root
 from flatpak_app import FlatpakApp
 from gnode import GNode
+from gtree import GTree
 from ocr import get_screen_text
 from templates import get_step
 from test_tree import TestTree
@@ -132,18 +133,26 @@ class TestGen:
             next(b, None)
             return zip(a, b)
         
-        graph = nx.Graph()
+        graph = nx.DiGraph(directed=True)
+        # img layour hack
+        layout_graph = nx.Graph()
         pairs = []
-        self.tests = tests or self.tests
+        tests = tests or self.tests
         for test in self.tests:
             for pair in pairwise(test):
-                graph.add_edge(
-                    f'{pair[0].name}\n{pair[0].roleName}',
-                    f'{pair[1].name}\n{pair[1].roleName}')
+                names = [pair[0].name, pair[1].name]
+                for name in names:
+                    if len(name.split()) >= 2:
+                        name = name.split()[0]
+                
+                graph.add_edge(f'{names[0]}', f'{names[1]}')
+                layout_graph.add_edge(f'{names[0]}', f'{names[1]}')
         
-        pos = nx.spring_layout(graph, k=0.1*1/np.sqrt(len(graph.nodes())), iterations=10)
-        nx.draw(graph, pos=None, node_size=20, font_size=3, with_labels=True)
-        plt.savefig(f'{self.app.app_name}/{self.app.app_name}_graph.png', dpi=500)
+        pos = nx.spring_layout(
+            layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=20)
+        nx.draw(graph, pos=pos, arrows=True, arrowsize=5,\
+            node_size=20, width=0.5, font_size=5, with_labels=True)
+        plt.savefig(f'{self.app.app_name}_graph.png', dpi=600)
     
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
@@ -151,7 +160,6 @@ class TestGen:
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.test_sequences()
-        import ipdb; ipdb.set_trace()
         self.export_node_graph()
         self.app.stop()
         self.generate_scenarios()

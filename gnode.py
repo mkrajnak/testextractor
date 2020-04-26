@@ -17,12 +17,26 @@ class GNode:
         self.action_method = anode.doActionNamed
         self.next = self.get_children()
 
-    def get_nodes_as_list(self):
+    def get_nodes_list(self):
         """ returns node and it's children in one list"""
         nodes = []
         for x in self.next:
-            nodes +=  [x] + x.get_nodes_as_list()
-        return nodes    
+            nodes +=  [x] + x.get_nodes_list()
+        return nodes
+    
+    def get_unique_nodes_list(self):
+        node_names = []
+        unique = []
+        diff_number = 0
+        for node in self.get_nodes_list():
+            node.name = node.name or node.roleName
+            if node.name in node_names:
+                node.name = f'{node.name}#{diff_number}'
+                diff_number += 1
+            node_names.append(node.name)
+            unique.append(node)
+        
+        return unique
 
     def get_children(self):
         """ returns all the children for the node """
