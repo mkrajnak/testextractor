@@ -1,0 +1,71 @@
+- job:
+    name: 'autocodecoverage-example'
+    description: |
+         gnome-system-monitor example of c/c++ code coverage with Jenkins integration
+    scm:
+        - git:
+            url: https://code.engineering.redhat.com/gerrit/autocodecoverage
+            basedir: autocodecoverage
+            wipe-workspace: true
+    builders:
+        - shell: |
+            echo "==== Package cleanup and installation ===="
+            yum remove -y gnome-system-monitor || true
+            yum install -y gnome-system-monitor
+        - shell: |
+            echo "==== Package instrumentation ===="
+            export BUILD_ROOT_DIR=$WORKSPACE
+            export CC_TASK=prepare
+            export PKG_NAME=gnome-system-monitor
+            pushd $WORKSPACE/autocodecoverage
+            ./cc.sh
+            popd
+        - shell: |
+            echo "==== Running instrumented package ===="
+            gnome-system-monitor || true
+        - shell: |
+            echo "==== Collecting coverage data ===="
+            export BUILD_ROOT_DIR=$WORKSPACE
+            export REPORT_TO_JENKINS=true
+            export CC_TASK=report
+            export PKG_NAME=gnome-system-monitor
+            pushd $WORKSPACE/autocodecoverage
+            ./cc.sh
+            popd
+        - shell: |
+            echo "==== Preparing and collecting data for Sonar ===="
+            yum install -y cppcheck
+            cd $WORKSPACE/rpmbuild-gnome-system-monitor/BUILD/gnome-system-monitor-3.14.1/src
+            gcov `ls | egrep '*.cpp|*.h|*.c' | xargs`
+        - sonar:
+            sonar-name: ci_sonar_tests
+            properties: |
+                # Required metadata
+                sonar.projectKey=org.redhat.c-reports-tests
+                sonar.projectName=c-reports-tests
+                sonar.projectVersion=1.0
+                sonar.verbose=true
+                sonar.log.level=DEBUG
+                # Comma-separated paths to directories with sources (required)
+                sonar.sources=$WORKSPACE/rpmbuild-gnome-system-monitor/BUILD/gnome-system-monitor-3.14.1/src/
+                # Language
+                sonar.language=c
+                sonar.cfamily.gcov.reportsPath=$WORKSPACE/rpmbuild-gnome-system-monitor/BUILD/gnome-system-monitor-3.14.1/src
+                sonar.x.cppcheck.path=/usr/bin/cppcheck
+                sonar.c.library.directories=/usr/include
+    publishers:
+        - cobertura:
+            report-file: gcovr-coverage-*.xml
+            targets:
+                - method:
+                    healthy: 80
+                    unhealthy: 0
+                    failing: 0
+                - line:
+                    healthy: 80
+                    unhealthy: 0
+                    failing: 0
+                - conditional:
+                    healthy: 70
+                    unhealthy: 0
+                    failing: 0
