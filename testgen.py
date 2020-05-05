@@ -193,7 +193,9 @@ class TestGen:
                 sequence += f"{node.name}:{node.roleName}:{node.action} => "
             log.info(f'Test: {i}:{sequence}')
 
-    def retag(self, line, node=None):
+    def retag(self, line, node=None, text=''):
+        if text: # OCR
+            return line.replace(f'<text>', f'{text}')
         # get all required tags from step template
         tags = [x[1:-1] for x in list(set(re.findall('<.+?>', line)))]
         for tag in tags:
@@ -205,9 +207,9 @@ class TestGen:
                 line = line.replace(f'<{tag}>', f'{getattr(self.app, tag)}')
         return f'{line}\n'  
 
-    def add_step(self, step_name, node=None):
-        """ this method only server as an insert interface to self.steps """
-        step = self.retag(get_step(step_name), node)
+    def add_step(self, step_name, node=None, text=''):
+        """ this method only serves as an insert interface to self.steps """
+        step = self.retag(get_step(step_name), node or text)
         # Behave can't handle special string well
         if node and node.name == '':
             step = step.replace('""', '"<Empty>"')
@@ -215,16 +217,20 @@ class TestGen:
         self.steps.append(step)
 
     def generate_ocr_check(self, node, needle=''):
-        if self.OCR == False or node.name == '' or needle == '':
+        if self.OCR == False or (node.name == '' and needle == ''):
             return
+        
         sleep(1)
         # Formating is a problem, keep it simple
         if needle:
             text = self.filter_string(needle)
         elif len(node.name.split()) > 2:
             text = self.filter_string(node.name.split()[0])
+        else:
+            text = node.name
         # check if actual string is on the screen
-        if node.name in get_screen_text():
+        
+        if text in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', node)
         else:
             log.info(f'OCR: Failed to find string "{node.name}""')
@@ -280,7 +286,7 @@ class TestGen:
         if node.name == '':
             return # Skip Verification of empty nodes/test fields
         anode = self.app.instance.child(node.name, node.roleName)
-        if anode.showing and anode.visible:
+        if anode.showing or anode.visible:
             self.add_step('ASSERT_STATE_SHOWING', anode)
             self.generate_ocr_check(anode)
 
@@ -362,6 +368,7 @@ class TestGen:
                 # app is running but windows have changed
                 window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
+                self.generate_ocr_check(window)
             else:
                 apps = list(set(
                     apps_before).symmetric_difference(root.applications()))

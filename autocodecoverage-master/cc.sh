@@ -34,7 +34,7 @@ LCOV_DEFAULT="./lcov-1.14-2.fc31.noarch.rpm"
 REPORT_TO_DEFAULT="nest.test.redhat.com:/mnt/qa/desktop/codecoverage/"
 REPORT_TO_DEFAULT_HTTP="http://nest.test.redhat.com/mnt/qa/desktop/codecoverage/"
 LOCAL_REPORT_DIR="/mnt/cc_reports"
-SCOPE_DEFAULT="RHEL-8.2"
+SCOPE_DEFAULT="RHEL-8.3"
 DEF_BUILD_ROOT_DIR="/tmp"
 DEF_REPORT_TO_JENKINS="no"
 
@@ -310,15 +310,13 @@ function prepare_codecoverage ()
     if [ "$DISABLE_OPTIMIZATION" == 'yes' ]; then
         OPTFLAGS="-O0 -g -fprofile-arcs -ftest-coverage"
     else
-        OPTFLAGS="-g -fprofile-arcs -ftest-coverage"
+        OPTFLAGS="$SYS_OPTFLAGS -fprofile-arcs -ftest-coverage"
     fi
     echo "info: setting optflags: $OPTFLAGS"
     echo optflags: "$(arch)" "${OPTFLAGS}" > ~/.rpmrc
-
+    # additional flags requires for generation of .debugsources packages
     export CFLAGS="${RPM_OPT_FLAGS}"
     export CXXFLAGS="${RPM_OPT_FLAGS}"
-    export -DCMAKE_C_FLAGS="${RPM_OPT_FLAGS}"
-    export -DCMAKE_CXX_FLAGS="${RPM_OPT_FLAGS}"
 
     echo  "info: building the lcov enabled packages ..."
     rpmbuild --define "_topdir $BUILD_ROOT_DIR/rpmbuild-$PKG_NAME" -bb $BUILD_ROOT_DIR/rpmbuild-"${PKG_NAME}"/SPECS/"${PKG_NAME}".spec --noclean --nocheck
@@ -386,7 +384,7 @@ function report_codecoverage ()
         echo "reporting the aggregate results in cobertura format - using lcov_cobertura"
         VER=$(echo "$(pushd $BUILD_ROOT_DIR/rpmbuild-"${PKG_NAME}"/BUILD/*)" | cut -d ' ' -f 1 | awk -F "/" '{print $NF}')
         pushd $BUILD_ROOT_DIR/rpmbuild-"${PKG_NAME}"/BUILD/*
-        python3 -m gcovr -r . --xml-pretty > "$WORKSPACE"/gcovr-coverage-"${PKG_NAME}".xml
+        # python3 -m gcovr -r . --xml-pretty > "$WORKSPACE"/gcovr-coverage-"${PKG_NAME}".xml
         python3 -m lcov_cobertura "${PKG_NAME}".info -o "$WORKSPACE"/lcov_cobertura-coverage-"${PKG_NAME}".xml
         popd
         sed -i "s/filename=\"/filename=\"rpmbuild-"${PKG_NAME}"\/BUILD\/$VER\/src\//g"  "$WORKSPACE"/lcov_cobertura-coverage-"${PKG_NAME}".xml
@@ -477,13 +475,11 @@ function report_codecoverage ()
     check_return_zero "error: failed generating the current html report"
 
     if [ "$REPORT_TO_JENKINS" == "yes" ] && [ "$AGGREGATE" != "yes" ]; then
-        sudo yum -y install python_setuptools python2-setuptools
-        sudo easy_install pip
-        sudo pip install gcovr
+        sudo pip3 install gcovr
         echo "Generating NON-AGGREGATE results in Jenkins Cobertura plugin format"
         VER=$(echo "$(pushd $BUILD_ROOT_DIR/rpmbuild-"${PKG_NAME}"/BUILD/*)" | cut -d ' ' -f 1 | awk -F "/" '{print $NF}')
         pushd $BUILD_ROOT_DIR/rpmbuild-"${PKG_NAME}"/BUILD/*
-        gcovr -r . --xml-pretty > "$WORKSPACE"/gcovr-coverage-"${PKG_NAME}".xml
+        python3 -m gcovr -r . --xml-pretty > "$WORKSPACE"/gcovr-coverage-"${PKG_NAME}".xml
         popd
         sed -i "s/filename=\"/filename=\"rpmbuild-"${PKG_NAME}"\/BUILD\/$VER\/src\//g"  "$WORKSPACE"/gcovr-coverage-"${PKG_NAME}".xml
         echo "Coverage collected and stored in XML format for $PKG_NAME"
