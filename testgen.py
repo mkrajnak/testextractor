@@ -160,6 +160,7 @@ class TestGen:
         self.app.start()
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
+        self.test_trees = []
         self.tests = self.test_sequences()
         self.export_node_graph()
         self.app.stop()
@@ -176,7 +177,9 @@ class TestGen:
             exit(1)
 
     def test_sequences(self, anode=None, parent=None):
-        return TestTree(self.app.a11y_app_name, anode, parent=parent).test_sequences()
+        tree = TestTree(self.app.a11y_app_name, anode, parent=parent)
+        self.test_trees.append(tree)
+        return tree.test_sequences()
 
     def get_tree_diff(self, before, after):
         return list(set(before).symmetric_difference(after))
@@ -250,7 +253,6 @@ class TestGen:
             pass
     
     def execute_action(self, node, action_sleep=1):
-        import ipdb; ipdb.set_trace()
         if not node.action:
             return
         # fetch fresh instance
@@ -265,9 +267,13 @@ class TestGen:
             log.info(f'{node.name} {node.roleName} is possibly disabled for action')
         # perform action
         try:
-            atspi_node.doActionNamed(node.action)
-            self.add_step('ACTION', node)
+            if node.action:
+                atspi_node.doActionNamed(node.action)
+            else:
+                atspi_node.click()
             sleep(action_sleep)
+            self.add_step('ACTION', node)
+            node.tested = True
         except Exception as e:
             # Fail to perform the action
             log.info(f'Failed to perform {node.action} on {node.name} {node.roleName}')
