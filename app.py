@@ -47,26 +47,41 @@ class App(Application):
         self.instance = root.application(self.a11y_app_name)
         self.main_window_name = self.instance.child(roleName='frame').name
 
+    def quit_application(self):
+        try: # Quiting the application via gnome-shell menu
+            shell = root.application('gnome-shell')
+            shell.child(self.app).click()
+            shell.child('Quit').click() 
+            return True
+        except:
+            return False
+
     def stop(self):
-        if hasattr(self, 'kill_command') and self.kill_command:
-            system(self.kill_command)
-        else:
-            system(f'sudo pkill {self.app_name}')
+        if not self.quit_application():
+            if hasattr(self, 'kill_command') and self.kill_command:
+                system(self.kill_command)
+            else:
+                system(f'sudo pkill {self.app_name}')
         
         self.instance = None
         self.main_window_name = None
         self.return_code = None
 
     def check_log(self, test_number):
+        report = ''
         # check RC, if application has RC of None, set 0 instead
-        self.return_code = self.proc.poll() or 0
+        self.return_code = self.proc.poll()
+        if self.return_code not in [0, None]:
+            report += f'TEST:{test_number} ended with RC:{self.return_code}'
         
+        self.stop()
         app_log, _ = self.proc.communicate()
         app_log = app_log.decode()
         # error check
         for error in error_list:
             if error in app_log.lower():
-                print(f'TEST:{test_number} contains {error}:\n{app_log.lower()}')
+                report += f'TEST:{test_number} contains {error}:\n{app_log.lower()}'
+                print(report)
         
         # write to logfile
         self.log_path = f'{self.app_name}/{self.app_name}.log'
@@ -77,6 +92,7 @@ class App(Application):
         self.log.write(f'TEST:{test_number}, RC:{self.return_code}\n')  
         self.log.flush()
         self.log.close()
+        return report
 
     def cleanup(self):
         for cmd in self.cleanup_cmds:

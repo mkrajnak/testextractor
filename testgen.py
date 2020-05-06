@@ -53,6 +53,7 @@ class TestGen:
         self.tests = []
         self.explored_paths = []
         self.failed_scenarios = []
+        self.error_report = []
         # generation param
         self.flatpak = 'flatpak' in cfg
         self.OCR = OCR
@@ -134,7 +135,7 @@ class TestGen:
             return zip(a, b)
         
         graph = nx.DiGraph(directed=True)
-        # img layour hack
+        # img layout hack
         layout_graph = nx.Graph()
         pairs = []
         tests = tests or self.tests
@@ -231,7 +232,7 @@ class TestGen:
         # check if actual string is on the screen
         
         if text in get_screen_text():
-            self.add_step('ASSERT_NAME_OCR', node)
+            self.add_step('ASSERT_NAME_OCR', text=text)
         else:
             log.info(f'OCR: Failed to find string "{node.name}""')
 
@@ -276,9 +277,21 @@ class TestGen:
                     pass
             log.info(e)
             return
-
-        if checked != None and checked != atspi_node.checked: # This is tricky
+        # The following check relies on the application cleanup, 
+        # the toggled/untoggled option by test should be se back to default value
+        if checked != None and checked != atspi_node.checked:
             self.add_step('ASSERT_STATE_CHECKED', atspi_node)
+
+    def check_errors(self):
+        error = self.app.check_log(self.test_number)
+        if error:
+            msg = ''.join([error, 'Steps to Reproduce:\n'] + self.steps)
+            self.error_report.append(msg)
+
+    def generate_error_report(self):
+        print("WARNING:" if self.error_report else "No errors found!")
+        for error in self.error_report:
+            print(error)
 
     def handle_last_node(self, node):
         ''' Generated an assertion for the last node in sequence '''
@@ -378,8 +391,8 @@ class TestGen:
                 else:
                     self.handle_new_nodes(app_before, test)
         
+        self.check_errors()
         self.app.stop()
-        self.app.check_log(self.test_number)
         scenario += self.steps
 
     # multiple scenarios management inside one feature file
@@ -416,6 +429,7 @@ class TestGen:
             self.test_number += 1
         
         log.info(''.join(scenario))
+        self.generate_error_report()
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
         self.save_tests(filename='failed.pkl')
@@ -454,7 +468,7 @@ class TestGen:
 @click.option('--app', prompt='Application name',
     help='Name of the application in apps.yaml')
 def handle_args(shallow, debug, test, app, disable_ocr, generate_project_only):
-    """ Accessibility test generatrion tool for GTK+ applications"""
+    """ Accessibility test generation tool for GTK+ applications"""
     # log.disabled = debug
     log.info(f'shallow:{shallow}, debug:{debug}, '
               f'test:{test}, app:{app}, ocr:{disable_ocr}')
