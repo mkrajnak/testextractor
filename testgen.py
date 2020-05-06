@@ -234,7 +234,7 @@ class TestGen:
         if text in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', text=text)
         else:
-            log.info(f'OCR: Failed to find string "{node.name}""')
+            log.info(f'OCR: Failed to find string "{node.name}"')
 
     def get_app_nodes(self):
         return [x.anode for x in TestTree(self.app.a11y_app_name).get_node_list()]
@@ -250,6 +250,7 @@ class TestGen:
             pass
     
     def execute_action(self, node, action_sleep=1):
+        import ipdb; ipdb.set_trace()
         if not node.action:
             return
         # fetch fresh instance
