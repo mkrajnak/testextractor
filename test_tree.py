@@ -8,7 +8,6 @@ class TestTree(GTree):
         """ Create a copy if the tree composed only from nodes with actions """
         super(TestTree, self).__init__(a11yappname, node=anode, parent=parent)
         nodes = self.get_node_list()
-        self.tested = False
         for node in nodes:
             # special exception nameless page tab
             if not node.name and node.roleName in['page tab', 'menu']:

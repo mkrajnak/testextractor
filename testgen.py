@@ -54,6 +54,8 @@ class TestGen:
         self.explored_paths = []
         self.failed_scenarios = []
         self.error_report = []
+        self.total_events = 0
+        self.events = 0
         # generation param
         self.flatpak = 'flatpak' in cfg
         self.OCR = OCR
@@ -160,7 +162,6 @@ class TestGen:
         self.app.start()
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
-        self.test_trees = []
         self.tests = self.test_sequences()
         self.export_node_graph()
         self.app.stop()
@@ -178,7 +179,6 @@ class TestGen:
 
     def test_sequences(self, anode=None, parent=None):
         tree = TestTree(self.app.a11y_app_name, anode, parent=parent)
-        self.test_trees.append(tree)
         return tree.test_sequences()
 
     def get_tree_diff(self, before, after):
@@ -197,6 +197,22 @@ class TestGen:
                 sequence += f"{node.name}:{node.roleName}:{node.action} => "
             log.info(f'Test: {i}:{sequence}')
 
+    def print_event_coverage_report(self, tests=None):
+        tests = tests or self.tests
+        nodes = []
+        for test in tests:
+            for node in test:
+                    if not node.tested and node.roleName != 'application':
+                        nodes += [
+                            f"{node.name}:{node.roleName}:{node.action}"
+                        ]
+        report = f"Event Coverage Report:\n"
+        report += f"Covered Events: {self.events}/{self.total_events}\n"
+        if nodes:
+            nodes = "\n".join(nodes)
+            report += f"Node without the coverage:{nodes}"
+        print(report)
+        
     def retag(self, line, node=None, text=''):
         if text: # OCR
             return line.replace(f'<text>', f'{text}')
@@ -267,6 +283,7 @@ class TestGen:
             log.info(f'{node.name} {node.roleName} is possibly disabled for action')
         # perform action
         try:
+            self.total_events += 1
             if node.action:
                 atspi_node.doActionNamed(node.action)
             else:
@@ -274,6 +291,7 @@ class TestGen:
             sleep(action_sleep)
             self.add_step('ACTION', node)
             node.tested = True
+            self.events += 1
         except Exception as e:
             # Fail to perform the action
             log.info(f'Failed to perform {node.action} on {node.name} {node.roleName}')
@@ -436,6 +454,7 @@ class TestGen:
             self.test_number += 1
         
         log.info(''.join(scenario))
+        self.print_event_coverage_report()
         self.generate_error_report()
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))

@@ -18,4 +18,5 @@ dummy_roleNames = [
     'split pane',
     'list',
     'table cell', #? 
+    'frame'
 ]

@@ -5,6 +5,7 @@ class GNode:
         self.anode = anode # keep the reference to the original accessible object
         self.name = anode.name
         self.roleName = anode.roleName
+        self.tested = False
         # parent staff
         self.parent_name = anode.parent.name
         self.parent_roleName = anode.parent.roleName
@@ -15,6 +16,7 @@ class GNode:
         # self.id = (self.name, self.roleName, self.parent_name, self.parent_roleName)
         self.action = next((x for x in anode.actions.keys()), '')
         self.action_method = anode.doActionNamed
+        # children/leafs
         self.next = self.get_children()
 
     def get_nodes_list(self):
