@@ -23,7 +23,10 @@ def execute_action(ctx, name, roleName, action):
     name = '' if name == '<Empty>' else name
     node = ctx.app.instance.child(name, roleName)
     focus_node(node)
-    node.doActionNamed(action)
+    if action == 'Click':
+        node.click()
+    else:
+        node.doActionNamed(action)
     sleep(ACTION_SLEEP)
 
 

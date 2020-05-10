@@ -8,6 +8,7 @@ dummy_roleNames = [
     'page tab list', 
     # 'page tab', has to be clicked but has no action listed
     # 'list item',
+    # 'frame' detection of the duplicit windows
     'panel', 
     'scroll bar',
     'scroll pane',
@@ -18,5 +19,4 @@ dummy_roleNames = [
     'split pane',
     'list',
     'table cell', #? 
-    'frame'
 ]

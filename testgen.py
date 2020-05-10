@@ -28,6 +28,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 log = logging.getLogger('log')
 
 OCR_CHAR_BLACKLIST = ". …—'"
+WINDOW_ROLENAMES = ['frame', 'dialog', 'file chooser', 'application']
 
 def random_chooser(node):
     actions = [(x, next((y for y in x.actions.keys() if 'expand' not in y),None)) for x in node.findChildren(
@@ -99,7 +100,7 @@ class TestGen:
 
             with open(f'{self.app.app_name}/cleanup.sh', 'w') as fd:
                 fd.write(cleanup)
-            cleanup = 'system("bash cleanup.py")'
+            cleanup = 'system("bash cleanup.sh")'
 
         # create tags for values to be swapped
         tags = [
@@ -202,7 +203,7 @@ class TestGen:
         nodes = []
         for test in tests:
             for node in test:
-                    if not node.tested and node.roleName != 'application':
+                    if not node.tested and node.roleName in WINDOW_ROLENAMES:
                         nodes += [
                             f"{node.name}:{node.roleName}:{node.action}"
                         ]
@@ -210,7 +211,7 @@ class TestGen:
         report += f"Covered Events: {self.events}/{self.total_events}\n"
         if nodes:
             nodes = "\n".join(nodes)
-            report += f"Node without the coverage:{nodes}"
+            report += f"Nodes without the coverage:{nodes}"
         print(report)
         
     def retag(self, line, node=None, text=''):
@@ -269,8 +270,6 @@ class TestGen:
             pass
     
     def execute_action(self, node, action_sleep=1):
-        if not node.action:
-            return
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
         self.focus_node(node)
@@ -286,7 +285,8 @@ class TestGen:
             self.total_events += 1
             if node.action:
                 atspi_node.doActionNamed(node.action)
-            else:
+            else:# actionless items page tab, list item, resort to the default action
+                node.action = 'Click'
                 atspi_node.click()
             sleep(action_sleep)
             self.add_step('ACTION', node)
@@ -337,8 +337,7 @@ class TestGen:
         # store windows/dialogs as they are without actions and will be
         # filtered out
         try: # LO glib atspi error
-            new_windows = [x for x in diff if x.roleName in [
-                'frame', 'dialog', 'file chooser']]
+            new_windows = [x for x in diff if x.roleName in WINDOW_ROLENAMES]
             diff = [x for x in diff if x.actions]
         except Exception as e:
             log.debug(traceback.format_exc())
@@ -388,7 +387,7 @@ class TestGen:
         self.app.cleanup()
         self.app.start() # only one runtime controller for now
 
-        test_nodes = [x for x in test if x.roleName != 'application']
+        test_nodes = [x for x in test if x.roleName not in WINDOW_ROLENAMES]
 
         for node in test_nodes:
             apps_before = root.applications()
@@ -447,7 +446,6 @@ class TestGen:
                 log.info('ERROR: while generaring tests, saving test lists')
                 self.print_sequences([test])
                 traceback.print_exc()
-
             # add test to yaml for CI execution
             with open(f'{self.app.app_name}/mapper.yaml', 'a') as f:
                 f.write(f'  - {test_tag}\n')
@@ -458,7 +456,7 @@ class TestGen:
         self.generate_error_report()
         with open(f'{path.expanduser(self.app.app_name)}/features/generated.feature', 'a') as f:
             f.write(''.join(scenario))
-        self.save_tests(filename='failed.pkl')
+        self.save_tests(filename=f'{self.app.app_name}.pkl')
         if self.failed_scenarios:
             self.print_sequences(tests=self.failed_scenarios)
             self.save_tests(filename='failed.pkl', tests=self.failed_scenarios)
