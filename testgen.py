@@ -4,6 +4,7 @@ import pickle
 import re
 import traceback
 from copy import copy, deepcopy
+from datetime import datetime
 from itertools import tee
 from os import path, system, walk
 from random import choice
@@ -285,11 +286,16 @@ class TestGen:
             self.total_events += 1
             if node.action:
                 atspi_node.doActionNamed(node.action)
+                self.add_step('ACTION', node)
             else:# actionless items page tab, list item, resort to the default action
                 node.action = 'Click'
                 atspi_node.click()
+                self.add_step('ACTION', node)
+                # restore the original action in the node
+                # so it can be used as expeted in another test case
+                node.action = ''
+            
             sleep(action_sleep)
-            self.add_step('ACTION', node)
             node.tested = True
             self.events += 1
         except Exception as e:
@@ -502,11 +508,18 @@ def handle_args(shallow, debug, test, app, disable_ocr, generate_project_only):
     except KeyError:
         print(f'{app} not found, check apps.yaml')
         exit(1)
-    
-    TestGen(app, cfg[app], test=test, shallow=shallow, \
-        OCR=disable_ocr, generate_project_only=generate_project_only)
-    
+ 
+    start_time = datetime.now()
+    TestGen(
+        app, 
+        cfg[app], 
+        test=test, 
+        shallow=shallow, 
+        OCR=disable_ocr, 
+        generate_project_only=generate_project_only
+    )
+    end_time = datetime.now()
+    print(f"Generation time: {end_time - start_time}")
 
 if __name__ == "__main__":
-
     handle_args()
