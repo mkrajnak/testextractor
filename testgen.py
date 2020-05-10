@@ -203,7 +203,7 @@ class TestGen:
         nodes = []
         for test in tests:
             for node in test:
-                    if not node.tested and node.roleName in WINDOW_ROLENAMES:
+                    if not node.tested and node.roleName not in WINDOW_ROLENAMES:
                         nodes += [
                             f"{node.name}:{node.roleName}:{node.action}"
                         ]

@@ -12,6 +12,7 @@ dummy_roleNames = [
     'panel', 
     'scroll bar',
     'scroll pane',
+    'root pane',
     'viewport',
     'list box',
     'label',
