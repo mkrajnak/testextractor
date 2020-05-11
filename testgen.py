@@ -153,11 +153,23 @@ class TestGen:
                 graph.add_edge(f'{names[0]}', f'{names[1]}')
                 layout_graph.add_edge(f'{names[0]}', f'{names[1]}')
         
+        
         pos = nx.spring_layout(
-            layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=20)
-        nx.draw(graph, pos=pos, arrows=True, arrowsize=5,\
-            node_size=20, width=0.5, font_size=5, with_labels=True)
-        plt.savefig(f'{self.app.app_name}/{self.app.app_name}_graph{postfix}.png', dpi=600)
+            layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
+
+        nx.draw(graph, pos=pos, arrows=True, arrowsize=5, font_color='black', \
+            node_size=40, width=0.5, font_size=5, with_labels=True)
+        plt.savefig(f'{self.app.app_name}/{self.app.app_name}{postfix}.png', dpi=400)
+        plt.clf()
+
+        layout_graph = nx.convert_node_labels_to_integers(layout_graph)
+        pos = nx.spring_layout(
+            layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
+
+        graph = nx.convert_node_labels_to_integers(graph)
+        nx.draw(graph, pos=pos, arrows=True, arrowsize=5, font_color='white', \
+            node_size=40, width=0.5, font_size=5, with_labels=True)
+        plt.savefig(f'{self.app.app_name}/{self.app.app_name}_n_{postfix}.png', dpi=400)
     
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
@@ -165,10 +177,10 @@ class TestGen:
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.test_sequences()
-        self.export_node_graph(postfix='_start')
+        self.export_node_graph(postfix='start')
         self.app.stop()
         self.generate_scenarios()
-        self.export_node_graph(postfix='_final')
+        self.export_node_graph(postfix='final')
 
     def init_tests(self):
         """ start with tests generation for all tests, or test defined by --test """
@@ -190,34 +202,37 @@ class TestGen:
     def filter_string(self, string):
         return string.translate({ord(x): '' for x in OCR_CHAR_BLACKLIST})
 
-    def print_sequences(self, tests=None):
+    def print_sequences(self, tests=None, print=True):
         tests = tests or self.tests
+        sequences = ""
         for i, test in zip(range(len(tests)), tests):
             sequence = ""
             for node in test:
                 if not node.parent:
                     continue
                 sequence += f"{node.name}:{node.roleName}:{node.action} => "
-            log.info(f'Test: {i}:{sequence}')
+            sequences += f'{sequence}\n'
+            
+            if print and tests:
+                log.info(f'Test: {i}:{sequence}')
+        return sequences
 
     def print_event_coverage_report(self, tests=None):
         tests = tests or self.tests
-        nodes_without_coverage = []
+        unexecuted = []
         nodes = []
         for test in tests:
             for node in test:
                     nodes.append(node)
                     if not node.tested and node.roleName not in WINDOW_ROLENAMES:
-                        nodes_without_coverage += [
-                            f"{node.name}:{node.roleName}:{node.action}"
-                        ]
+                        unexecuted += [test]
         
         report = f"Event Coverage Report:\n"
         report += f"Covered Events: {self.events}/{self.total_events}\n"
         report += f"Number of covered Nodes: {len(set(nodes))}\n"
-        if nodes_without_coverage:
-            nodes_without_coverage = "\n".join(nodes_without_coverage)
-            report += f"Nodes without the coverage:{nodes_without_coverage}"
+        if unexecuted:
+            unexecuted = self.print_sequences(unexecuted, False)
+            report += f"Nodes without the coverage:\n{unexecuted}"
         print(report)
         
     def retag(self, line, node=None, text=''):
