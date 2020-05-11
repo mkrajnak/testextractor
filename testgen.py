@@ -201,18 +201,22 @@ class TestGen:
 
     def print_event_coverage_report(self, tests=None):
         tests = tests or self.tests
+        nodes_without_coverage = []
         nodes = []
         for test in tests:
             for node in test:
+                    nodes.append(node)
                     if not node.tested and node.roleName not in WINDOW_ROLENAMES:
-                        nodes += [
+                        nodes_without_coverage += [
                             f"{node.name}:{node.roleName}:{node.action}"
                         ]
+        
         report = f"Event Coverage Report:\n"
         report += f"Covered Events: {self.events}/{self.total_events}\n"
-        if nodes:
-            nodes = "\n".join(nodes)
-            report += f"Nodes without the coverage:{nodes}"
+        report += f"Number of covered Nodes: {len(set(nodes))}\n"
+        if nodes_without_coverage:
+            nodes_without_coverage = "\n".join(nodes_without_coverage)
+            report += f"Nodes without the coverage:{nodes_without_coverage}"
         print(report)
         
     def retag(self, line, node=None, text=''):
