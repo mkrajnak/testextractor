@@ -230,6 +230,7 @@ class TestGen:
         report = f"Event Coverage Report:\n"
         report += f"Covered Events: {self.events}/{self.total_events}\n"
         report += f"Number of covered Nodes: {len(set(nodes))}\n"
+        report += f"Number of Generated Test Cases: {len(tests)}\n"
         if unexecuted:
             unexecuted = self.print_sequences(unexecuted, False)
             report += f"Nodes without the coverage:\n{unexecuted}"
