@@ -129,7 +129,7 @@ class TestGen:
                     with open(path.join(root, f), 'w') as fd:
                         fd.write(string)
     
-    def export_node_graph(self, tests=None):
+    def export_node_graph(self, tests=None, postfix=''):
         """ pairwise function from itertools doc 
             https://docs.python.org/3/library/itertools.html """
         def pairwise(iterable):
@@ -157,7 +157,7 @@ class TestGen:
             layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=20)
         nx.draw(graph, pos=pos, arrows=True, arrowsize=5,\
             node_size=20, width=0.5, font_size=5, with_labels=True)
-        plt.savefig(f'{self.app.app_name}_graph.png', dpi=600)
+        plt.savefig(f'{self.app.app_name}/{self.app.app_name}_graph{postfix}.png', dpi=600)
     
     def generate_tests(self):
         """ initial application start, tree scan, sequence generation """
@@ -165,9 +165,10 @@ class TestGen:
         self.assert_app_contains_unique_nodes()
         # Generate tree for evaluation
         self.tests = self.test_sequences()
-        self.export_node_graph()
+        self.export_node_graph(postfix='_start')
         self.app.stop()
         self.generate_scenarios()
+        self.export_node_graph(postfix='_final')
 
     def init_tests(self):
         """ start with tests generation for all tests, or test defined by --test """
