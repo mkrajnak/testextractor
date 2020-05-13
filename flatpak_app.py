@@ -42,7 +42,7 @@ class FlatpakApp(Flatpak):
     def check_log(self, test_number):
         # check RC, if application has RC of None, set 0 instead
         self.return_code = self.proc.poll() or 0
-        
+        self.stop()
         app_log, _ = self.proc.communicate()
         app_log = app_log.decode()
         # error check
@@ -54,7 +54,7 @@ class FlatpakApp(Flatpak):
         self.log_path = f'{self.app_name}/{self.app_name}.log'
         self.log = open(f'{self.log_path}', 'a')
         # mark the beginning of the new instance
-        self.log.write(f'\nTEST:{test_number} Started logging for {self.exec}')
+        self.log.write(f'\nTEST:{test_number} Started logging for {self.exec}\n')
         self.log.write(app_log)
         self.log.write(f'TEST:{test_number}, RC:{self.return_code}\n')  
         self.log.flush()

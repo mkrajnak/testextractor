@@ -87,7 +87,7 @@ class App(Application):
         self.log_path = f'{self.app_name}/{self.app_name}.log'
         self.log = open(f'{self.log_path}', 'a')
         # mark the beginning of the new instance
-        self.log.write(f'\nTEST:{test_number} Started logging for {self.exec}')
+        self.log.write(f'\nTEST:{test_number} Started logging for {self.exec}\n')
         self.log.write(app_log)
         self.log.write(f'TEST:{test_number}, RC:{self.return_code}\n')  
         self.log.flush()

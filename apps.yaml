@@ -23,6 +23,9 @@ org.gnome.gedit:
   a11y_app_name: gedit
   flatpak: True
 
-# org.gnome.Evince:
-#   a11y_app_name: evince
-#   - flatpak
+gedit:
+  a11y_app_name: gedit
+
+org.gnome.Evince:
+  a11y_app_name: evince
+  flatpak: True

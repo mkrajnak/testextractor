@@ -7,3 +7,4 @@ pyyaml
 qecore
 matplotlib
 networkx
+timeout-decorator

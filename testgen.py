@@ -15,6 +15,7 @@ import click
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import timeout_decorator
 import yaml
 from app import App
 from dogtail.tree import root
@@ -272,7 +273,7 @@ class TestGen:
         else:
             text = node.name
         # check if actual string is on the screen
-        
+        text = self.filter_string(text)
         if text in get_screen_text():
             self.add_step('ASSERT_NAME_OCR', text=text)
         else:
@@ -291,6 +292,7 @@ class TestGen:
         except Exception:
             pass
     
+    @timeout_decorator.timeout(10)
     def execute_action(self, node, action_sleep=1):
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
@@ -424,7 +426,6 @@ class TestGen:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check, TODO returncodes ?
-            
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
             elif not self.app.instance.isChild(
@@ -443,7 +444,6 @@ class TestGen:
                     self.handle_new_nodes(app_before, test)
         
         self.check_errors()
-        self.app.stop()
         scenario += self.steps
 
     # multiple scenarios management inside one feature file
