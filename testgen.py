@@ -267,9 +267,9 @@ class TestGen:
         sleep(1)
         # Formating is a problem, keep it simple
         if needle:
-            text = self.filter_string(needle)
+            text = needle
         elif len(node.name.split()) > 2:
-            text = self.filter_string(node.name.split()[0])
+            text = node.name.split()[0]
         else:
             text = node.name
         # check if actual string is on the screen

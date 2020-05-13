@@ -63,15 +63,11 @@ class App(Application):
             else:
                 system(f'sudo pkill {self.app_name}')
         
-        self.instance = None
-        self.main_window_name = None
-        self.return_code = None
-
     def check_log(self, test_number):
         report = ''
         # check RC, if application has RC of None, set 0 instead
-        self.return_code = self.proc.poll()
-        if self.return_code not in [0, None]:
+        self.return_code = self.proc.poll() or 0
+        if self.return_code != 0:
             report += f'TEST:{test_number} ended with RC:{self.return_code}'
         
         self.stop()

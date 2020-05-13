@@ -34,10 +34,6 @@ class FlatpakApp(Flatpak):
 
     def stop(self):
         system(f'flatpak kill {self.app_name} &> /dev/null')
-        
-        self.instance = None
-        self.main_window_name = None
-        self.return_code = None
 
     def check_log(self, test_number):
         # check RC, if application has RC of None, set 0 instead
