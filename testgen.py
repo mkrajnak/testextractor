@@ -507,17 +507,18 @@ class TestGen:
 
 
 @click.command()
-@click.option('--generate-project-only', default=False, required=False, is_flag=True,
-    help='only generates project folder for --app')
-@click.option('--disable-ocr', default=True, required=False, is_flag=True,
-    help='disabled-ocr checks while generating tests')
-@click.option('--shallow', default=False, required=False, is_flag=True,
-    help='Skip inserting new parts to test tree')
-@click.option('--debug', default=False, required=False, is_flag=True,
-    help='Enable debug logging')
-@click.option('--test', required=False, type=click.INT, help='Test number in generated sequence.')
 @click.option('--app', prompt='Application name',
-    help='Name of the application in apps.yaml')
+    help='Name of the application entry in apps.yaml (compulsory)')
+@click.option('--generate-project-only', default=False, required=False, is_flag=True,
+    help='Generates only project folder for --app')
+@click.option('--disable-ocr', default=True, required=False, is_flag=True,
+    help='Disables OCR')
+@click.option('--shallow', default=False, required=False, is_flag=True,
+    help='Disables model expansion (test only nodes available after start)')
+@click.option('--debug', default=False, required=False, is_flag=True,
+    help='Enables debug logging')
+@click.option('--test', required=False, type=click.INT, 
+    help='Regenerates only defined test, expected to be used with --shallow')
 def handle_args(shallow, debug, test, app, disable_ocr, generate_project_only):
     """ Accessibility test generation tool for GTK+ applications"""
     # log.disabled = debug
