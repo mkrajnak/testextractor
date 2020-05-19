@@ -10,7 +10,7 @@ class TestTree(GTree):
         nodes = self.get_node_list()
         for node in nodes:
             # special exception nameless page tab
-            if not node.name and node.roleName in['page tab', 'menu']:
+            if not node.name and node.roleName in ['page tab', 'menu']:
                 self.delete_node(node)
             if node.roleName in dummy_roleNames:
                 self.delete_node(node)

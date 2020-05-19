@@ -18,7 +18,7 @@ class FlatpakApp(Flatpak):
         for param in cfg:
             setattr(self, param, cfg[param])
         
-        self.exec = f'flatpak run {self.app_name}'
+        self.exec = f'flatpak run {self.app_name} {self.params}'
         self.proc = None
         self.log = None
         self.log_path = None

@@ -21,11 +21,32 @@ libreoffice-startcenter:
 
 org.gnome.gedit:
   a11y_app_name: gedit
+  params: " test_files/lorem.txt"
+  cleanup_cmds:
+  - "rm -rf  .var/app/org.gnome.gedit/"
   flatpak: True
 
 gedit:
   a11y_app_name: gedit
+  params: " test_files/lorem.txt"
+  cleanup_cmds:
+    - "dconf reset -f /org/gnome/gedit/"
 
 org.gnome.Evince:
   a11y_app_name: evince
+  params: " test_files/gnome-documents-getting-started.pdf"
+  cleanup_cmds:
+  - "rm -rf  ~/.var/app/org.gnome.Evince/"
+  - "gio info test_files/gnome-documents-getting-started.pdf | grep -o 'metadata::evince::[^:]*' | xargs -L 1 -r gio set -t unset test_files/gnome-documents-getting-started.pdf"
   flatpak: True
+
+evince:
+  a11y_app_name: evince
+  desktop_file_path: /usr/share/applications/evince.desktop
+  params: " test_files/gnome-documents-getting-started.pdf"
+  cleanup_cmds:
+  - "dconf reset -f /org/gnome/evince/"
+  - "gio info test_files/gnome-documents-getting-started.pdf | grep -o 'metadata::evince::[^:]*' | xargs -L 1 -r gio set -t unset test_files/gnome-documents-getting-started.pdf"
+
+yelp:
+  a11y_app_name: yelp

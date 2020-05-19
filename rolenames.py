@@ -2,6 +2,7 @@
 
 """ contains roleNames which offers no action """
 dummy_roleNames = [
+    'animation',
     'filler',
     'separator', 
     'menu bar',
@@ -19,5 +20,6 @@ dummy_roleNames = [
     'icon',
     'split pane',
     'list',
-    'table cell', #? 
+    'table cell', #?
+    'table column header',
 ]

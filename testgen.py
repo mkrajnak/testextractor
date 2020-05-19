@@ -26,8 +26,9 @@ from ocr import get_screen_text
 from templates import get_step
 from test_tree import TestTree
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
-log = logging.getLogger('log')
+log = logging.getLogger('testgenlog')
+log.setLevel(logging.INFO)
+logging.basicConfig(format="%(levelname)s:%(message)s")
 
 OCR_CHAR_BLACKLIST = ". …—'"
 WINDOW_ROLENAMES = ['frame', 'dialog', 'file chooser', 'application']
@@ -66,9 +67,10 @@ class TestGen:
         # app/project initiation/test generation
         if self.flatpak:
             cfg.pop('flatpak')
-            self.app = FlatpakApp(app_name, cfg) # TODO verbose
-        else:    
-            self.app = App(app_name, cfg) # TODO verbose
+            self.app = FlatpakApp(app_name, cfg)
+        else:
+            self.app = App(app_name, cfg)
+        cfg.pop('params', None)
         self.generate_project(cfg)
         
         if generate_project_only:
@@ -121,7 +123,7 @@ class TestGen:
             cfg.pop('packages', None)
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
-            for f in files:
+            for f in [x for x in files if 'test_files' not in root]:
                 for tag, value in tags:
                     with open(path.join(root, f), 'r') as fd:
                         string = fd.read()
@@ -397,13 +399,13 @@ class TestGen:
             sequences += self.test_sequences(menu)
         # remaining actions nodess
         sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
-        log.debug('Adding new sequences:')
+        log.info('Adding new sequences:')
         self.print_sequences(sequences)
 
         for seq in sequences:
             self.tests.append(test+seq)
             self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
-       
+
     def handle_new_apps(self, apps):
         for app in [x for x in apps if x.name]:
             step = get_step('ASSERT_APP').replace('<app_name>', app.name)
@@ -515,14 +517,14 @@ class TestGen:
     help='Disables OCR')
 @click.option('--shallow', default=False, required=False, is_flag=True,
     help='Disables model expansion (test only nodes available after start)')
-@click.option('--debug', default=False, required=False, is_flag=True,
-    help='Enables debug logging')
+@click.option('--verbose', default=False, required=False, is_flag=True,
+    help='Enables verbose logging')
 @click.option('--test', required=False, type=click.INT, 
     help='Regenerates only defined test, expected to be used with --shallow')
-def handle_args(shallow, debug, test, app, disable_ocr, generate_project_only):
+def handle_args(shallow, verbose, test, app, disable_ocr, generate_project_only):
     """ Accessibility test generation tool for GTK+ applications"""
-    # log.disabled = debug
-    log.info(f'shallow:{shallow}, debug:{debug}, '
+    log.disabled = not verbose    
+    log.info(f'shallow:{shallow}, verbose:{verbose}, '
               f'test:{test}, app:{app}, ocr:{disable_ocr}')
     cfg = yaml.load(open('apps.yaml', 'r'), yaml.SafeLoader)
     try:
