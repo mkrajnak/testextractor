@@ -121,6 +121,9 @@ class TestGen:
             pkgs = '\n'.join([f'  - {pkg}' for pkg in cfg['packages']])
             tags +=[('<packages>', pkgs)]
             cfg.pop('packages', None)
+        else:
+            tags +=[('<packages>', '')]
+        
         # iterate through file and and retag them 
         for root, _, files in walk(path.expanduser(self.app.app_name)):
             for f in [x for x in files if 'test_files' not in root]:
@@ -294,13 +297,13 @@ class TestGen:
         except Exception:
             pass
     
-    @timeout_decorator.timeout(10)
-    def execute_action(self, node, action_sleep=1):
+    @timeout_decorator.timeout(15)
+    def execute_action(self, node, action_sleep=1.5):
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
         self.focus_node(node)
         # check boxes
-        checked=None # TODO consider doing this for radio button item
+        checked=None
         if 'check' in node.roleName and hasattr(atspi_node, 'checked'):
             checked = atspi_node.checked
         # disabled items
@@ -375,7 +378,6 @@ class TestGen:
             return
         # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
         sequences = []
-        parent = test[-1]
         for window in new_windows: # New Window/Duplicate window
             self.add_step('ASSERT_WINDOW_SHOWN', window)
             self.generate_ocr_check(window)
@@ -398,7 +400,7 @@ class TestGen:
                 diff.remove(child)
             sequences += self.test_sequences(menu)
         # remaining actions nodess
-        sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
+        sequences += [[GNode(x, parent=test[-1])] for x in diff if x.showing or x.visible]
         log.info('Adding new sequences:')
         self.print_sequences(sequences)
 
@@ -427,13 +429,17 @@ class TestGen:
             if node == test_nodes[-1]:
                 self.handle_last_node(node)
             self.execute_action(node)
-            # after action state check, TODO returncodes ?
-            if not self.app.is_running():
+            # after action state check
+            if not self.app.is_running or self.app.proc.poll() != None:
                 self.add_step('ASSERT_QUIT')
-            elif not self.app.instance.isChild(
+            elif 'libreoffice' in self.app.app_name and not self.app.instance.isChild(
                     self.app.main_window_name, recursive=False):
                 # app is running but windows have changed
                 window = self.app.get_current_window()
+                self.add_step('ASSERT_WINDOW_SHOWN', window)
+                self.generate_ocr_check(window)
+            elif not self.app.instance.isChild(self.app.main_window_name):
+                # app is running but windows have changed
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
                 self.generate_ocr_check(window)
             else:
@@ -457,11 +463,17 @@ class TestGen:
         self.init_tests()
 
         for test in self.tests:
-            test_name = next((x.name for x in test[::-1] if x.name), '')
-            # create testtag + replace unwanted chars in test names
-            test_tag = self.filter_string(f'{self.test_number}_{test[-1].name}')
+            test_name = next((x.name for x in test[::-1] if x.name), f'Test: {self.test_number}')
+            # handle too long test names + create a test tag for behave
+            if len(test_name) > 20:
+                test_tag = f'{self.test_number}_{test_name[-20:]}'
+            else:
+                test_tag = f'{self.test_number}_{test_name[-20:]}'
             
-            scenario_header = get_step('TEST').replace('<test>', test_tag)
+            # replace unwanted chars in test names
+            test_tag = self.filter_string(test_tag)
+            scenario_header = get_step('TEST').replace(
+                    '<test>', test_tag).replace('<test_name>', test_name)
             scenario += [self.retag(scenario_header)]
             if start:
                 if  hasattr(self.app, 'params'):

@@ -9,7 +9,7 @@ SCENARIO = {
     'TEST': 
     '''  
     @<test>
-    Scenario: <app_name>: <test>''',
+    Scenario: <app_name>: <test_name>''',
 
     'ACTION': 
     '      * Action: "<action>" "<name>" "<roleName>"',

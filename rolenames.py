@@ -20,6 +20,12 @@ dummy_roleNames = [
     'icon',
     'split pane',
     'list',
-    'table cell', #?
+    'table cell', #? yelp
     'table column header',
+    'section',
+    'article',
+    'landmark',
+    'document web',
+    'paragraph',
+    'static'
 ]
