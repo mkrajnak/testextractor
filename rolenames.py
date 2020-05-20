@@ -27,5 +27,6 @@ dummy_roleNames = [
     'landmark',
     'document web',
     'paragraph',
-    'static'
+    'static',
+    # 'heading' # some headings contains link
 ]

@@ -30,7 +30,7 @@ log = logging.getLogger('testgenlog')
 log.setLevel(logging.INFO)
 logging.basicConfig(format="%(levelname)s:%(message)s")
 
-OCR_CHAR_BLACKLIST = ". …—'"
+OCR_CHAR_BLACKLIST = ",. …—'’"
 WINDOW_ROLENAMES = ['frame', 'dialog', 'file chooser', 'application']
 
 def random_chooser(node):
@@ -163,8 +163,8 @@ class TestGen:
         pos = nx.spring_layout(
             layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
 
-        nx.draw(graph, pos=pos, arrows=True, arrowsize=5, font_color='black', \
-            node_size=40, width=0.5, font_size=5, with_labels=True)
+        nx.draw(graph, pos=pos, arrows=True, arrowsize=6, font_color='black', \
+            node_size=40, width=0.5, font_size=3, with_labels=True)
         plt.savefig(f'{self.app.app_name}/{self.app.app_name}{postfix}.png', dpi=400)
         plt.clf()
 
@@ -173,8 +173,8 @@ class TestGen:
             layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
 
         graph = nx.convert_node_labels_to_integers(graph)
-        nx.draw(graph, pos=pos, arrows=True, arrowsize=5, font_color='white', \
-            node_size=40, width=0.5, font_size=5, with_labels=True)
+        nx.draw(graph, pos=pos, arrows=True, arrowsize=6, font_color='white', \
+            node_size=40, width=0.5, font_size=3, with_labels=True)
         plt.savefig(f'{self.app.app_name}/{self.app.app_name}_n_{postfix}.png', dpi=400)
     
     def generate_tests(self):
@@ -298,7 +298,7 @@ class TestGen:
             pass
     
     @timeout_decorator.timeout(15)
-    def execute_action(self, node, action_sleep=1.5):
+    def execute_action(self, node, action_sleep=1):
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
         self.focus_node(node)
@@ -465,10 +465,12 @@ class TestGen:
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), f'Test: {self.test_number}')
             # handle too long test names + create a test tag for behave
-            if len(test_name) > 20:
-                test_tag = f'{self.test_number}_{test_name[-20:]}'
-            else:
-                test_tag = f'{self.test_number}_{test_name[-20:]}'
+            # if len(test_name) > 20:
+            #     test_tag = f'{self.test_number}_{test_name[-20:]}'
+            # else:
+            #     test_tag = f'{self.test_number}_{test_name[-20:]}'
+
+            test_tag = f'{self.test_number}'
             
             # replace unwanted chars in test names
             test_tag = self.filter_string(test_tag)
