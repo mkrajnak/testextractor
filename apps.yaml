@@ -19,6 +19,18 @@ libreoffice-startcenter:
   packages:
     - libreoffice
 
+libreoffice-draw:
+  a11y_app_name: soffice
+  app_process_name: soffice.bin
+  desktop_file_path: /usr/share/applications/libreoffice-draw.desktop
+  kill_command: "pkill soffice"
+  params: "--norestore --draw" # required to avoid unwanted dialogs
+  cleanup_cmds:
+    - "pkill soffice" # LO required a custom kill cmd
+    - "rm -rf .config/libreoffice/*"
+  packages:
+    - libreoffice-draw
+
 org.gnome.gedit:
   a11y_app_name: gedit
   params: " test_files/lorem.txt"

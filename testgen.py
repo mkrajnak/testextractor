@@ -23,6 +23,7 @@ from flatpak_app import FlatpakApp
 from gnode import GNode
 from gtree import GTree
 from ocr import get_screen_text
+from rolenames import dummy_roleNames
 from templates import get_step
 from test_tree import TestTree
 
@@ -362,37 +363,45 @@ class TestGen:
             self.add_step('ASSERT_STATE_SHOWING', anode)
             self.generate_ocr_check(anode)
 
+    def remove_children_from_diff(self, window, diff):
+        for x in diff:
+            if window.isChild(x.name, x.roleName):
+                diff.remove(x)
+        return diff
+
+    def assert_new_window(self, window, diff):
+        # generate assertion that new window has shown, remove children from diff
+        self.add_step('ASSERT_WINDOW_SHOWN', window)
+        self.generate_ocr_check(window)
+
+    @timeout_decorator.timeout(15)
     def handle_new_nodes(self, app_before, test):
         diff = self.get_tree_diff(app_before, self.get_app_nodes())
         # actions diff vs normal diff
         if diff == [] or test in self.explored_paths:
             return
         self.explored_paths.append(test)
-        # store windows/dialogs as they are without actions and will be
-        # filtered out
-        try: # LO glib atspi error
-            new_windows = [x for x in diff if x.roleName in WINDOW_ROLENAMES]
-            diff = [x for x in diff if x.actions]
-        except Exception as e:
-            log.debug(traceback.format_exc())
-            return
-        # new_nodes = [GNode(x, node.parent) for x in diff if x.actions]
+        # and diff is filled with a lott of nodes that cannot be evaluated mostly Libreoffice
+        diff = [x for x in diff if x.roleName not in dummy_roleNames]
+        new_windows = [x for x in diff if x.roleName in WINDOW_ROLENAMES]
+        # New window detection
         sequences = []
         for window in new_windows: # New Window/Duplicate window
-            self.add_step('ASSERT_WINDOW_SHOWN', window)
-            self.generate_ocr_check(window)
+            self.assert_new_window(window, diff)
+            if len(new_windows) > 2 and 'libreoffice' in self.app.app_name:
+                return
             if window.name == self.app.main_window_name and len(new_windows) == 1:
                 return
-            if window.roleName == 'file chooser':
-                continue
-            # continue with building graph
-            for child in [x for x in diff if window.isChild(
-                    x.name, x.roleName, recursive=False)]:
-                    diff.remove(child)
+            if window.roleName == 'file chooser': # file dialog should not be included
+                self.remove_children_from_diff(window, diff)
+                return
+            # continue with building graph for a new window
             sequences += self.test_sequences(window)
-        if self.shallow == True:
+            diff = self.remove_children_from_diff(window, diff)
+        # shallow is att this point so we have the window assertions
+        if self.shallow:
             return
-        # Then handle menus
+        # Then handle menus, might be obsolete
         new_menus = [x for x in diff if x.roleName in ['menu']]
         for menu in new_menus:
             diff.remove(menu)
@@ -400,14 +409,14 @@ class TestGen:
                 diff.remove(child)
             sequences += self.test_sequences(menu)
         # remaining actions nodess
-        sequences += [[GNode(x, parent=test[-1])] for x in diff if x.showing or x.visible]
         log.info('Adding new sequences:')
         self.print_sequences(sequences)
+        self.export_node_graph(postfix='final')
 
         for seq in sequences:
             self.tests.append(test+seq)
-            self.explored_paths.append(test+seq) # TODO unclocked nodes but newly added paths are not being added
-
+            self.explored_paths.append(test+seq)
+        
     def handle_new_apps(self, apps):
         for app in [x for x in apps if x.name]:
             step = get_step('ASSERT_APP').replace('<app_name>', app.name)
@@ -425,21 +434,23 @@ class TestGen:
         for node in test_nodes:
             apps_before = root.applications()
             app_before = self.get_app_nodes()
-            
             if node == test_nodes[-1]:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check
-            if not self.app.is_running or self.app.proc.poll() != None:
+            if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
-            elif 'libreoffice' in self.app.app_name and not self.app.instance.isChild(
-                    self.app.main_window_name, recursive=False):
+            # acessibility bug in libreoffice
+            elif 'Calc' in self.app.get_current_window().name \
+                    and not self.app.instance.isChild(
+                        self.app.main_window_name, recursive=False):
                 # app is running but windows have changed
                 window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
                 self.generate_ocr_check(window)
             elif not self.app.instance.isChild(self.app.main_window_name):
                 # app is running but windows have changed
+                window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
                 self.generate_ocr_check(window)
             else:
@@ -449,7 +460,10 @@ class TestGen:
                 if apps:
                     self.handle_new_apps(apps)
                 else:
-                    self.handle_new_nodes(app_before, test)
+                    try:
+                        self.handle_new_nodes(app_before, test)
+                    except Exception as e:
+                        print(f'Failed to handle new nodes {e}')
         
         self.check_errors()
         scenario += self.steps
@@ -470,7 +484,7 @@ class TestGen:
             # else:
             #     test_tag = f'{self.test_number}_{test_name[-20:]}'
 
-            test_tag = f'{self.test_number}'
+            test_tag = f'"{self.test_number}"'
             
             # replace unwanted chars in test names
             test_tag = self.filter_string(test_tag)
