@@ -245,7 +245,7 @@ class TestGen:
         
     def retag(self, line, node=None, text=''):
         if text: # OCR
-            return line.replace(f'<text>', f'{text}')
+            return line.replace(f'<text>', f'{text}') + '\n'
         # get all required tags from step template
         tags = [x[1:-1] for x in list(set(re.findall('<.+?>', line)))]
         for tag in tags:
@@ -437,19 +437,19 @@ class TestGen:
                 self.handle_last_node(node)
             self.execute_action(node)
             # after action state check
+            # app is running but windows have changed
+            window = self.app.get_current_window()
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
             # acessibility bug in libreoffice
-            elif 'Calc' in self.app.get_current_window().name \
+                window = self.app.get_current_window()
+            elif window and 'Calc' in window.name \
                     and not self.app.instance.isChild(
                         self.app.main_window_name, recursive=False):
-                # app is running but windows have changed
-                window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
                 self.generate_ocr_check(window)
             elif not self.app.instance.isChild(self.app.main_window_name):
                 # app is running but windows have changed
-                window = self.app.get_current_window()
                 self.add_step('ASSERT_WINDOW_SHOWN', window)
                 self.generate_ocr_check(window)
             else:
