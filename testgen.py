@@ -269,16 +269,7 @@ class TestGen:
     def generate_ocr_check(self, node, needle=''):
         if self.OCR == False or (node.name == '' and needle == ''):
             return
-        sleep(1)
-        # Formating is a problem, keep it simple
-        if needle:
-            text = needle
-        elif len(node.name.split()) > 2:
-            text = node.name.split()[0]
-        else:
-            text = node.name
-        # check if actual string is on the screen
-        text = self.filter_string(text)
+        text = needle or node.name
         if text in get_screen_text():
             self.add_step('ASSERT_TEXT_OCR', text=text)
         else:
@@ -438,12 +429,12 @@ class TestGen:
             self.execute_action(node)
             # after action state check
             # app is running but windows have changed
-            window = self.app.get_current_window()
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
+                return    
+            window = self.app.get_current_window()
             # acessibility bug in libreoffice
-                window = self.app.get_current_window()
-            elif window and 'Calc' in window.name \
+            if window and 'Calc' in window.name \
                     and not self.app.instance.isChild(
                         self.app.main_window_name, recursive=False):
                 self.add_step('ASSERT_WINDOW_SHOWN', window)

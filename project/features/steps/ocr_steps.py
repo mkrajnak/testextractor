@@ -1,18 +1,30 @@
 #!/usr/bin/env python3
-from os import system
+from os import environ, system
 from time import sleep
 
 import cv2
 import numpy as np
 from behave import step
+from PIL import Image
 from pytesseract import image_to_string
 from steps import focus_node
-from os import environ
+
+
+# rescale code inspired by 
+# https://stackoverflow.com/questions/28935983/preprocessing-image-for-tesseract-ocr-with-opencv
+def rescale_image(filename):
+   basewidth = 3200
+   img = Image.open(filename)
+   wpercent = (basewidth/float(img.size[0]))
+   hsize = int((float(img.size[1])*float(wpercent)))
+   img = img.resize((basewidth,hsize), Image.ANTIALIAS)
+   img.save(filename)
+
 
 # Tesseract's params https://github.com/tesseract-ocr/tesseract/blob/master/doc/tesseract.1.asc
 #psm 4 = Assume a single column of text of variable sizes.
 #oem 3 = Default, based on what is available.
-def get_ocr_text(filename, config=''):
+def get_ocr_text(filename, config=r'--oem 3 --psm 12'):
    """ 
    This function will handle the core OCR processing of images. 
    """ 
