@@ -24,7 +24,6 @@ def get_ocr_text(filename, config=r'--oem 3 --psm 4'):
    
    # cv2.imwrite('/tmp/grayScale.png', img)
    # cv2.imwrite('/tmp/inverted.png', inverted)
-   
    original_text = image_to_string(img, lang='eng', config=config)
    inverted_text = image_to_string(inverted, lang='eng', config=config)
    return f'{original_text}\n{inverted_text}'

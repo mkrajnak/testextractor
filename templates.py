@@ -31,8 +31,8 @@ SCENARIO = {
     '      * Start: "<app_name>" via command "<exec>" in session',
     'ASSERT_QUIT':
     '      * QUIT: <app_name> is not running',
-    'ASSERT_NAME_OCR':
-    '      * OCR: "<name>" is shown on the screen'
+    'ASSERT_TEXT_OCR':
+    '      * OCR: "<text>" is shown on the screen'
 }
 
 def get_step(key):

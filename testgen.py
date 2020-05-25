@@ -259,7 +259,7 @@ class TestGen:
 
     def add_step(self, step_name, node=None, text=''):
         """ this method only serves as an insert interface to self.steps """
-        step = self.retag(get_step(step_name), node or text)
+        step = self.retag(get_step(step_name), node=node, text=text)
         # Behave can't handle special string well
         if node and node.name == '':
             step = step.replace('""', '"<Empty>"')
@@ -269,7 +269,6 @@ class TestGen:
     def generate_ocr_check(self, node, needle=''):
         if self.OCR == False or (node.name == '' and needle == ''):
             return
-        
         sleep(1)
         # Formating is a problem, keep it simple
         if needle:
@@ -281,7 +280,7 @@ class TestGen:
         # check if actual string is on the screen
         text = self.filter_string(text)
         if text in get_screen_text():
-            self.add_step('ASSERT_NAME_OCR', text=text)
+            self.add_step('ASSERT_TEXT_OCR', text=text)
         else:
             log.info(f'OCR: Failed to find string "{node.name}"')
 
@@ -298,7 +297,7 @@ class TestGen:
         except Exception:
             pass
     
-    @timeout_decorator.timeout(15)
+    # @timeout_decorator.timeout(15)
     def execute_action(self, node, action_sleep=1):
         # fetch fresh instance
         atspi_node = self.app.instance.child(node.name, node.roleName)
@@ -479,12 +478,12 @@ class TestGen:
         for test in self.tests:
             test_name = next((x.name for x in test[::-1] if x.name), f'Test: {self.test_number}')
             # handle too long test names + create a test tag for behave
-            # if len(test_name) > 20:
-            #     test_tag = f'{self.test_number}_{test_name[-20:]}'
-            # else:
-            #     test_tag = f'{self.test_number}_{test_name[-20:]}'
+            if len(test_name) > 20: # yelp links contains too long names
+                test_tag = f'{self.test_number}_{test_name[-20:]}'
+            else:
+                test_tag = f'{self.test_number}_{test_name[-20:]}'
 
-            test_tag = f'"{self.test_number}"'
+            test_tag = f'{self.test_number}_{test_name}'
             
             # replace unwanted chars in test names
             test_tag = self.filter_string(test_tag)

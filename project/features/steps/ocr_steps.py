@@ -36,11 +36,6 @@ def assert_ocr_text(ctx, text):
    if 'OCR' in environ and environ['OCR'] == False:
       ctx.scenario.skip(f'OCR override by envirment variable OCR={environ["OCR"]}')
    sleep(1)
-   # try:
-   #    focus_node(ctx.app.instance.findChild(lambda x: 
-   #       text == x.name or text == x.text))
-   # except Exception:
-   #    pass
    IMG_LOCATION = '/tmp/ocr.png'
    # screenshot
    system(f'gnome-screenshot -f {IMG_LOCATION}')
