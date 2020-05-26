@@ -234,9 +234,9 @@ class TestGen:
                     if not node.tested and node.roleName not in WINDOW_ROLENAMES:
                         unexecuted += [test]
         
-        report = f"Event Coverage Report:\n"
+        report = f"Test Generator Report for Component: {self.app.name}\n"
         report += f"Covered Events: {self.events}/{self.total_events}\n"
-        report += f"Number of covered Nodes: {len(set(nodes))}\n"
+        report += f"Number of Covered Nodes: {len(set(nodes))}\n"
         report += f"Number of Generated Test Cases: {len(tests)}\n"
         if unexecuted:
             unexecuted = self.print_sequences(unexecuted, False)
@@ -364,7 +364,7 @@ class TestGen:
         self.add_step('ASSERT_WINDOW_SHOWN', window)
         self.generate_ocr_check(window)
 
-    @timeout_decorator.timeout(15)
+    # @timeout_decorator.timeout(15)
     def handle_new_nodes(self, app_before, test):
         diff = self.get_tree_diff(app_before, self.get_app_nodes())
         # actions diff vs normal diff
@@ -399,13 +399,15 @@ class TestGen:
                 diff.remove(child)
             sequences += self.test_sequences(menu)
         # remaining actions nodess
+        sequences += [[GNode(x)] for x in diff if x.showing or x.visible]
         log.info('Adding new sequences:')
         self.print_sequences(sequences)
         self.export_node_graph(postfix='final')
 
         for seq in sequences:
-            self.tests.append(test+seq)
-            self.explored_paths.append(test+seq)
+            if test+seq not in self.explored_paths:
+                self.tests.append(test+seq)
+                self.explored_paths.append(test+seq)
         
     def handle_new_apps(self, apps):
         for app in [x for x in apps if x.name]:
@@ -470,24 +472,23 @@ class TestGen:
             test_name = next((x.name for x in test[::-1] if x.name), f'Test: {self.test_number}')
             # handle too long test names + create a test tag for behave
             if len(test_name) > 20: # yelp links contains too long names
-                test_tag = f'{self.test_number}_{test_name[-20:]}'
+                test_tag = f'Test_{self.test_number}'
             else:
-                test_tag = f'{self.test_number}_{test_name[-20:]}'
-
-            test_tag = f'{self.test_number}_{test_name}'
+                test_tag = f'{self.test_number}_{test_name}'
             
             # replace unwanted chars in test names
             test_tag = self.filter_string(test_tag)
             scenario_header = get_step('TEST').replace(
                     '<test>', test_tag).replace('<test_name>', test_name)
-            scenario += [self.retag(scenario_header)]
-            if start:
-                if  hasattr(self.app, 'params'):
-                    scenario.append(self.retag(get_step('START_CMD')))
-                else:
-                    scenario.append(self.retag(get_step('START')))
+            
             try:
                 self.generate_steps(scenario, test)
+                if start:
+                    if  hasattr(self.app, 'params'):
+                        scenario.append(self.retag(get_step('START_CMD')))
+                    else:
+                        scenario.append(self.retag(get_step('START')))
+                scenario += [self.retag(scenario_header)]
             except Exception as e:
                 self.failed_scenarios.append(test) 
                 log.info('ERROR: while generaring tests, saving test lists')
