@@ -31,7 +31,7 @@ log = logging.getLogger('testgenlog')
 log.setLevel(logging.INFO)
 logging.basicConfig(format="%(levelname)s:%(message)s")
 
-OCR_CHAR_BLACKLIST = ",. …—'’"
+TEST_CASE_NAME_CHAR_BLACKLIST = ",. …—'’"
 WINDOW_ROLENAMES = ['frame', 'dialog', 'file chooser', 'application']
 
 def random_chooser(node):
@@ -207,7 +207,7 @@ class TestGen:
         return list(set(before).symmetric_difference(after))
 
     def filter_string(self, string):
-        return string.translate({ord(x): '' for x in OCR_CHAR_BLACKLIST})
+        return string.translate({ord(x): '' for x in TEST_CASE_NAME_CHAR_BLACKLIST})
 
     def print_sequences(self, tests=None, print=True):
         tests = tests or self.tests
