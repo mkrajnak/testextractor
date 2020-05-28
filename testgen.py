@@ -458,7 +458,6 @@ class TestGen:
                         print(f'Failed to handle new nodes {e}')
         
         self.check_errors()
-        scenario += self.steps
 
     # multiple scenarios management inside one feature file
     def generate_scenarios(self):
@@ -477,17 +476,21 @@ class TestGen:
                 test_tag = f'{self.test_number}_{test_name}'
             
             try:
+                # we append a generate test case only if the even sequence succeeds
+                self.generate_steps(scenario, test)
                 # replace unwanted chars in test names
                 test_tag = self.filter_string(test_tag)
                 scenario_header = get_step('TEST').replace(
                         '<test>', test_tag).replace('<test_name>', test_name)
+                # scenario header
                 scenario += [self.retag(scenario_header)]
-                
+                # start
                 if hasattr(self.app, 'params'):
                     scenario.append(self.retag(get_step('START_CMD')))
                 else:    
                     scenario.append(self.retag(get_step('START')))
-                self.generate_steps(scenario, test)
+                # steps
+                scenario += self.steps
             except Exception as e:
                 self.failed_scenarios.append(test) 
                 log.info('ERROR: while generaring tests, saving test lists')
