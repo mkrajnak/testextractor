@@ -57,4 +57,13 @@ class FlatpakApp(Flatpak):
         self.log.close()
 
     def cleanup(self):
-        pass
+        for cmd in self.cleanup_cmds:
+            system(cmd)
+
+    def get_current_window(self):
+        """ Returns the last opened window """
+        # fetch fresh instance
+        self.instance = root.application(self.a11y_app_name)
+        frames = self.instance.findChildren(lambda x: True, recursive=False)
+        return frames[-1] if frames else []
+    

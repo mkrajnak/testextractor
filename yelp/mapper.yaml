@@ -20,23 +20,4 @@ cleanup:
 
 testmapper:
 # Generated part of mapper
-  - 0_Menu
-  - 1_Find
-  - 2_Menu
-  - 3_Close
-  - 4_Back
-  - 5_Forward
-  - 6_Applicationmenu
-  - 7_Search
-  - 8_GNOMEHelp
-  - 9_About
-  - 10_Yelplogo
-  - 11_Yelplogo
-  - Test_12
-  - Test_13
-  - Test_14
-  - Test_15
-  - Test_16
-  - Test_17
-  - Test_18
-  - Test_19
+  - 0_Back

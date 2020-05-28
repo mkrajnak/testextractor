@@ -23,12 +23,13 @@ def rescale_image(filename):
 # Tesseract's params https://github.com/tesseract-ocr/tesseract/blob/master/doc/tesseract.1.asc
 #psm 4 = Assume a single column of text of variable sizes.
 #oem 3 = Default, based on what is available.
-def get_ocr_text(filename, config=r'--oem 3 --psm 12'): 
+def get_ocr_text(filename, config=r'--oem 3 --psm 12', rescale=False): 
    """ 
    This function will handle the core OCR processing of images. 
    """ 
-   # rescale size = (1800, 1800)
-   rescale_image(filename)
+   if rescale:
+      print('Rescaling')
+      rescale_image(filename)
    # greyscale conversion
    grayImage = cv2.cvtColor(cv2.imread(filename), cv2.COLOR_BGR2GRAY) 
    # tresholding

@@ -433,7 +433,7 @@ class TestGen:
             # app is running but windows have changed
             if not self.app.is_running():
                 self.add_step('ASSERT_QUIT')
-                return    
+                break    
             window = self.app.get_current_window()
             # acessibility bug in libreoffice
             if window and 'Calc' in window.name \
@@ -461,7 +461,7 @@ class TestGen:
         scenario += self.steps
 
     # multiple scenarios management inside one feature file
-    def generate_scenarios(self, start=True):
+    def generate_scenarios(self):
         """
         :param start: generate start step
         """
@@ -476,19 +476,18 @@ class TestGen:
             else:
                 test_tag = f'{self.test_number}_{test_name}'
             
-            # replace unwanted chars in test names
-            test_tag = self.filter_string(test_tag)
-            scenario_header = get_step('TEST').replace(
-                    '<test>', test_tag).replace('<test_name>', test_name)
-            
             try:
-                self.generate_steps(scenario, test)
-                if start:
-                    if  hasattr(self.app, 'params'):
-                        scenario.append(self.retag(get_step('START_CMD')))
-                    else:
-                        scenario.append(self.retag(get_step('START')))
+                # replace unwanted chars in test names
+                test_tag = self.filter_string(test_tag)
+                scenario_header = get_step('TEST').replace(
+                        '<test>', test_tag).replace('<test_name>', test_name)
                 scenario += [self.retag(scenario_header)]
+                
+                if hasattr(self.app, 'params'):
+                    scenario.append(self.retag(get_step('START_CMD')))
+                else:    
+                    scenario.append(self.retag(get_step('START')))
+                self.generate_steps(scenario, test)
             except Exception as e:
                 self.failed_scenarios.append(test) 
                 log.info('ERROR: while generaring tests, saving test lists')
