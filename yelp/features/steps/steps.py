@@ -32,11 +32,13 @@ def execute_action(ctx, name, roleName, action):
 
 @step('State: "{roleName}" "{name}" is shown')
 def assert_window_shown(ctx, name, roleName):
+    name = '' if name == '<Empty>' else name
     assert_state(ctx, name, roleName, 'showing', 'True')
 
 
 @step('State: "{roleName}" "{name}" "{prop}" is "{state}"')
 def assert_state(ctx, name, roleName, prop, state):
+    name = '' if name == '<Empty>' else name
     node = ctx.app.instance.child(name, roleName)
     focus_node(node)
     assert hasattr(node, prop), f'Obj: {node} is missing attribute {prop}'

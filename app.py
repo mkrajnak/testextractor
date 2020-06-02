@@ -74,8 +74,9 @@ class App(Application):
         app_log, _ = self.proc.communicate()
         app_log = app_log.decode()
         # error check
+        
         for error in error_list:
-            if error in app_log.lower():
+            if error.lower() in app_log.lower():
                 report += f'TEST:{test_number} contains {error}:\n{app_log.lower()}'
                 print(report)
         

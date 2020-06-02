@@ -160,15 +160,15 @@ class TestGen:
                 graph.add_edge(f'{names[0]}', f'{names[1]}')
                 layout_graph.add_edge(f'{names[0]}', f'{names[1]}')
         
-        
+        # we create 2 graphs, 1st with names
         pos = nx.spring_layout(
             layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
-
+        
         nx.draw(graph, pos=pos, arrows=True, arrowsize=6, font_color='black', \
             node_size=40, width=0.5, font_size=3, with_labels=True)
         plt.savefig(f'{self.app.app_name}/{self.app.app_name}{postfix}.png', dpi=400)
         plt.clf()
-
+        # we create 2 graphs, 2nd without the names. only with numbers
         layout_graph = nx.convert_node_labels_to_integers(layout_graph)
         pos = nx.spring_layout(
             layout_graph, k=0.3*1/np.sqrt(len(layout_graph.nodes())), iterations=50)
